@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "claude-sms-auth": {
+      "command": "bun",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/src/mcp-auth-server.ts"],
+      "env": {
+        "CLAUDE_SMS_AUTH_URL": "${CLAUDE_SMS_AUTH_URL}",
+        "CLAUDE_SMS_LOG_LEVEL": "${CLAUDE_SMS_LOG_LEVEL:-info}"
+      }
+    }
+  }
+}
