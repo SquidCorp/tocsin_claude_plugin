@@ -40,6 +40,16 @@ export const SessionStateSchema = z.object({
 
 export type SessionState = z.infer<typeof SessionStateSchema>;
 
+// Error categories for better SMS messages
+export const ErrorCategorySchema = z.enum([
+  'rate_limit',
+  'permission', 
+  'network',
+  'fatal',
+  'error'
+]);
+export type ErrorCategory = z.infer<typeof ErrorCategorySchema>;
+
 // API Request/Response schemas
 export const StartSessionRequestSchema = z.object({
   claude_session_id: z.string(),
@@ -60,7 +70,12 @@ export type StartSessionResponse = z.infer<typeof StartSessionResponseSchema>;
 export const EventRequestSchema = z.object({
   event_type: z.enum(['error', 'done', 'waiting']),
   timestamp: z.string().datetime(),
-  details: z.record(z.unknown()).optional(),
+  details: z.object({
+    hook: z.string().optional(),
+    category: ErrorCategorySchema.optional(),
+    tool: z.string().optional(),
+    preview: z.string().optional(),
+  }).passthrough().optional(),
 });
 
 export type EventRequest = z.infer<typeof EventRequestSchema>;
@@ -96,7 +111,5 @@ export const ApiErrorSchema = z.object({
   details: z.record(z.unknown()).optional(),
   request_id: z.string(),
 });
-
-export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;

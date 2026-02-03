@@ -3,6 +3,10 @@
     "PostToolUseFailure": [
       {
         "matcher": ".*",
+        "env": {
+          "CLAUDE_HOOK_TOOL_NAME": "{{toolName}}",
+          "CLAUDE_HOOK_ERROR_OUTPUT": "{{errorOutput}}"
+        },
         "hooks": [
           {
             "type": "command",
