@@ -1,5 +1,6 @@
 #!/bin/bash
 # Handle tool errors and send SMS notification via server
+
 set -e
 
 # Read JSON input from stdin
