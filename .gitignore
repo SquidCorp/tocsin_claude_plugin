@@ -1,0 +1,6 @@
+**/.config/
+**/auth.json
+**/.setup_id
+.DS_Store
+*.log
+/tmp/
