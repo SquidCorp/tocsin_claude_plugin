@@ -1,11 +1,16 @@
 #!/bin/bash
 # Handle session end - send completion notification via server
+set -e
 
-# Claude Code provides session end reason
-REASON="${CLAUDE_HOOK_REASON:-unknown}"
+# Read JSON input from stdin
+INPUT=$(cat)
+
+# Extract session info
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+REASON=$(echo "$INPUT" | jq -r '.reason // empty')
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Get session file (rest unchanged)
+# Get session file
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SESSION_FILE="${CONFIG_DIR}/session.json"
 AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"

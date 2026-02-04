@@ -1,14 +1,18 @@
 #!/bin/bash
 # Handle user activity (prompt submission) - resets idle timer via server
+set -e
 
+# Read JSON input from stdin
+INPUT=$(cat)
 
-# Get current timestamp
+# Extract session ID
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+LAST_ACTIVITY=$(echo "$INPUT" | jq -r '.timestamp // empty')
 
-# Get session file (rest unchanged)
+# Get session file
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SESSION_FILE="${CONFIG_DIR}/session.json"
-SESSION_ID="${CLAUDE_SESSION_ID:-}"
 AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
 
 if [ ! -f "$SESSION_FILE" ]; then
