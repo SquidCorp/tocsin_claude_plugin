@@ -8,7 +8,17 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Get session file (rest unchanged)
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SESSION_FILE="${CONFIG_DIR}/session.json"
+PID_FILE="${CONFIG_DIR}/heartbeat.pid"
 AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
+
+# Stop heartbeat daemon if running
+if [ -f "$PID_FILE" ]; then
+  HEARTBEAT_PID=$(cat "$PID_FILE" 2>/dev/null)
+  if [ -n "$HEARTBEAT_PID" ] && kill -0 "$HEARTBEAT_PID" 2>/dev/null; then
+    kill "$HEARTBEAT_PID" 2>/dev/null || true
+  fi
+  rm -f "$PID_FILE"
+fi
 
 if [ ! -f "$SESSION_FILE" ]; then
   exit 0
@@ -48,7 +58,8 @@ curl -s -X POST "${AUTH_URL}/sessions/${MONITORING_ID}/stop" \
     \"ended_at\": \"${TIMESTAMP}\"
   }" > /dev/null 2>&1
 
-# Clean up session file
+# Clean up session file and logs
 rm -f "$SESSION_FILE"
+rm -f "${CONFIG_DIR}/heartbeat.log"
 
 exit 0

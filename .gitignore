@@ -13,6 +13,9 @@ dist/
 coverage/
 *.log
 
+# Runtime logs
+heartbeat.log
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -26,3 +29,7 @@ Thumbs.db
 # Temp files
 *.tmp
 /tmp/
+
+# User config (contains tokens)
+.config/
+**/.config/claude-sms-notifier/

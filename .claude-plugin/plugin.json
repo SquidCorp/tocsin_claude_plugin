@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Get SMS notifications when Claude Code needs attention, finishes work, or hits errors. Perfect for remote/long-running sessions.",
   "author": {
-    "name": "Jeremy",
-    "email": "jeremy@example.com"
+    "name": "SquidCorp",
+    "email": "jeremy@squidcorp.ink"
   },
-  "homepage": "https://github.com/jeremy/claude-sms-notifier",
-  "repository": "https://github.com/jeremy/claude-sms-notifier",
+  "homepage": "https://github.com/SquidCorp/tocsin_claude_plugin",
+  "repository": "https://github.com/SquidCorp/tocsin_claude_plugin",
   "license": "MIT",
   "keywords": ["sms", "notification", "remote", "monitoring", "alert"],
   "commands": ["./commands/"],

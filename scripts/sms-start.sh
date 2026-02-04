@@ -88,6 +88,23 @@ EOF
   
   echo "✅ Session registered: ${MONITORING_ID}"
   echo ""
+  echo "🔄 Starting heartbeat daemon..."
+
+  # Start heartbeat daemon in background
+  nohup "${BASH_SOURCE%/*}/heartbeat-daemon.sh" > /dev/null 2>&1 &
+  HEARTBEAT_PID=$!
+
+  # Give it a moment to start
+  sleep 0.5
+
+  # Check if it's running
+  if kill -0 "$HEARTBEAT_PID" 2>/dev/null; then
+    echo "✅ Heartbeat active (PID: ${HEARTBEAT_PID})"
+  else
+    echo "⚠️  Heartbeat daemon failed to start (session still active)"
+  fi
+
+  echo ""
   echo "📱 Monitoring active for:"
   echo "  ${DESCRIPTION}"
   echo ""

@@ -5,8 +5,8 @@ Get SMS notifications when Claude Code needs your attention, finishes work, or h
 ## Quick Start
 
 ```bash
-# 1. Set your auth server URL
-export CLAUDE_SMS_AUTH_URL="https://auth.yourserver.com"
+# 1. Set your SMS server URL
+export CLAUDE_SMS_SERVER_URL="https://sms.yourserver.com"
 
 # 2. Install the plugin
 claude plugin install /path/to/claude-sms-notifier
@@ -52,27 +52,22 @@ claude plugin install /path/to/claude-sms-notifier
 2. **Start Monitoring** (`/sms-start "description"`)
    - Plugin registers session with your server
    - Server returns session token for this specific session
-   - Plugin starts:
-     - **Heartbeat** every 30 seconds (keeps session alive)
-     - **Inactivity timer** (10 minutes)
-   - Hooks start watching for events
+   - Hooks start watching for events (error detection, session end)
 
 3. **While Working**
-   - **User sends message** → Reset inactivity timer
+   - **User sends message** → Heartbeat sent to server
    - **Tool fails** → Hook fires → Report to server → SMS sent (if not rate limited)
-   - **10 min silence** → Inactivity timer fires → "Waiting" SMS sent
-   - **Session ends** → "Done" SMS sent
+   - **Session ends** → Hook fires → "Done" SMS sent
 
-4. **Rate Limiting**
-   - 1 SMS per 30 minutes **per event type**
-   - Error at 14:00 → SMS
-   - Error at 14:15 → Blocked (same type, <30min)
-   - Done at 14:15 → SMS (different type)
+4. **Rate Limiting** (Server-Side)
+   - Server enforces 1 SMS per 30 minutes **per event type**
+   - Error at 14:00 → SMS sent
+   - Error at 14:15 → Blocked by server (same type, <30min)
+   - Done at 14:15 → SMS sent (different type)
 
 5. **Cleanup** (`/sms-stop` or session end)
-   - Stop timers
    - Send final state to server
-   - Cleanup temp files
+   - Remove session.json file
 
 ---
 
@@ -90,43 +85,46 @@ claude-sms-notifier/
 │   └── sms-logout.md      # /sms-logout
 ├── hooks/
 │   └── hooks.json         # Event registrations
-├── src/
-│   ├── types.ts           # Zod schemas (validation)
-│   ├── api-client.ts      # HTTP client to your server
-│   ├── auth.ts            # Token management
-│   ├── session.ts         # Monitoring logic, timers
-│   ├── utils.ts           # Logging, helpers
-│   ├── mcp-auth-server.ts # Local OAuth callback server
-│   └── handlers/          # Hook implementations
-└── .mcp.json              # MCP server config
+├── scripts/               # Bash implementations
+│   ├── sms-setup.sh       # Authentication flow
+│   ├── sms-pair.sh        # Token exchange
+│   ├── sms-start.sh       # Session start + server sync
+│   ├── sms-stop.sh        # Session end
+│   ├── sms-logout.sh      # Revoke auth
+│   ├── handle-error.sh    # PostToolUseFailure hook
+│   ├── handle-activity.sh # UserPromptSubmit hook
+│   └── handle-session-end.sh # SessionEnd hook
+└── .claude-plugin/        # Plugin metadata
+    └── plugin.json        # Plugin manifest
 ```
 
 ### Data Flow
 
-**Authentication Flow:**
+**Authentication Flow (Remote Mode - Current Implementation):**
 ```
-User: /sms-setup
+User: /sms-setup --remote +1234567890
   ▼
-MCP Server starts (localhost:random)
+Plugin generates setup_id (UUID)
   ▼
-Browser opens: auth.yourserver.com/login?callback=localhost:xyz
+Plugin POST /login/submit-with-setup (phone, setup_id)
   ▼
-User enters phone
+Server sends SMS with 6-digit pairing code
   ▼
-Auth server sends SMS with 6-digit code
+Server returns setup_id confirmation
   ▼
-Auth server redirects to localhost callback with temp_token
-  ▼
-MCP server captures token, shows "Enter /sms-pair"
+User receives SMS with code
   ▼
 User: /sms-pair 123456
   ▼
-Plugin POST /auth/exchange (temp_token + pairing_code)
+Plugin POST /auth/exchange-by-setup (setup_id, pairing_code)
   ▼
-Server returns JWT (36h expiry)
+Server validates and returns JWT (36h expiry)
   ▼
-Plugin stores token in ~/.config/claude-sms-notifier/auth.json
+Plugin stores token in ~/.config/claude-sms-notifier/auth.json (600 perms)
 ```
+
+**Browser Mode (Planned, Not Yet Implemented):**
+The `/sms-setup` command without `--remote` flag is intended to open a browser for OAuth flow, but this requires an MCP server implementation that isn't available yet. Use `--remote` mode for now.
 
 **Session Monitoring Flow:**
 ```
@@ -182,12 +180,10 @@ See `docs/api-spec.md` for complete request/response schemas.
 
 ```bash
 # Required
-CLAUDE_SMS_AUTH_URL=https://auth.yourserver.com
+CLAUDE_SMS_SERVER_URL=https://sms.yourserver.com  # Default: https://sms.shadowemployee.xyz
 
-# Optional (defaults shown)
-CLAUDE_SMS_HEARTBEAT_INTERVAL=30000      # 30 seconds
-CLAUDE_SMS_INACTIVITY_THRESHOLD=600000   # 10 minutes
-CLAUDE_SMS_LOG_LEVEL=info                # debug|info|warn|error
+# Optional (with defaults)
+CLAUDE_SMS_HEARTBEAT_INTERVAL=30  # Heartbeat interval in seconds (default: 30)
 ```
 
 ### Environment Variables (Your Server)
@@ -215,6 +211,7 @@ JWT_SECRET=your-secret-key
 | `/sms-pair 123456` | Complete auth | After receiving SMS code |
 | `/sms-start "desc"` | Start monitoring | Beginning of focused work session |
 | `/sms-stop` | Stop monitoring | Done early, don't want more SMS |
+| `/sms-status` | Check status | See active session, heartbeat daemon state |
 | `/sms-logout` | Revoke auth | Switch phone, uninstall, security |
 
 ---
@@ -240,10 +237,59 @@ Reply STOP to disable
 **Waiting:**
 ```
 ⏳ Claude: "Database migration"
-Waiting for input (10 min idle)
+Waiting for input (idle detected)
 
 Reply STOP to disable
+
+Note: Idle detection not yet implemented in v1.0.0
 ```
+
+---
+
+## Current Implementation Status
+
+### ✅ What Works Now
+
+- **Authentication**: Remote mode (`--remote +phone`) for headless/SSH sessions
+- **Session Management**: Create/stop monitoring sessions with server sync
+- **Background Heartbeat**: Daemon process that sends keep-alive pings every 30 seconds
+- **Event Hooks**: Three hooks that trigger on Claude Code events
+  - `PostToolUseFailure` - Detects blocking errors and sends SMS
+  - `UserPromptSubmit` - Sends heartbeat when user sends messages
+  - `SessionEnd` - Notifies when Claude session ends and stops heartbeat daemon
+- **Server Integration**: Full API integration for session tracking and event reporting
+- **Error Filtering**: Only sends SMS for blocking errors (not file-not-found, syntax errors, etc.)
+- **Security**: Proper token storage (600 permissions), HTTPS-only, separate session tokens
+
+### 🚧 Planned Features (Not Yet Implemented)
+
+The following features are **planned but not yet available**:
+
+- **Inactivity Timer**: Automatic 10-minute idle detection and "waiting" SMS
+- **Token Auto-Refresh**: Automatic JWT refresh before 36-hour expiry
+- **Browser-Based OAuth**: MCP server for OAuth callback (requires local server)
+- **Local Rate Limiting**: Client-side SMS cooldown (currently server-side only)
+- **Environment Configuration**: Config options for intervals and log levels
+- **Logging System**: File-based debug logs
+
+These features are documented in the codebase's `REMEDIATION_PLAN.md` and will be implemented in future versions.
+
+### 📊 Implementation Details
+
+**Current Architecture**:
+- Pure Bash scripts (no TypeScript/Node.js required)
+- Background heartbeat daemon (30-second keep-alive pings)
+- Hook-based event detection (reactive, not polling)
+- Stateless client (server manages rate limiting and session state)
+- Config stored in `~/.config/claude-sms-notifier/`
+
+**Hybrid Approach**:
+The implementation combines background processes with event hooks:
+- ✅ **Background daemon** for continuous heartbeat (keeps session alive)
+- ✅ **Event hooks** for instant error/completion detection (no polling delay)
+- ✅ **Automatic cleanup** when session ends (daemon stops automatically)
+- ✅ **Lightweight** single bash process (~1-2MB RAM)
+- ⚠️ **Inactivity detection** not yet implemented (requires monitoring user activity)
 
 ---
 
@@ -251,14 +297,13 @@ Reply STOP to disable
 
 | Scenario | Behavior |
 |----------|----------|
-| **Rate limit hit** | SMS skipped, logged. Next different event still sends. |
-| **Auth token expires** | User must re-run `/sms-setup`. Old sessions cleaned up. |
-| **Server down** | Plugin queues events, retries. SMS may be delayed/lost. |
-| **Claude crashes** | Session file persists, monitoring resumes on restart. |
-| **Multiple `/sms-start`** | Error: "Session already monitoring. Use /sms-stop first." |
-| **Invalid pairing code** | 5 attempts allowed, then temp_token invalidated. |
-| **Network blip** | Heartbeat retries. If persistent, session marked stale. |
-| **10min activity** | Timer resets on every UserPromptSubmit. Only fires after true idle. |
+| **Rate limit hit** | Server blocks SMS. Plugin receives 200 OK, no error shown to user. |
+| **Auth token expires** | User must re-run `/sms-setup`. Old sessions automatically expire. |
+| **Server down** | Plugin fails gracefully. Hooks exit with status 0 (no Claude interruption). |
+| **Claude crashes** | Session file remains. Restart `/sms-start` to create new session. |
+| **Multiple `/sms-start`** | Currently creates new session (old one orphaned on server). |
+| **Invalid pairing code** | Exchange fails with clear error message. |
+| **Network blip** | Hooks fire but curl may fail silently (non-blocking). |
 
 ---
 

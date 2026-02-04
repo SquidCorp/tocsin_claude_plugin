@@ -3,7 +3,7 @@
 
 set -e
 
-AUTH_URL="${CLAUDE_SMS_AUTH_URL:-https://sms.shadowemployee.xyz}"
+AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SETUP_ID_FILE="${CONFIG_DIR}/.setup_id"
 TOKEN_FILE="${CONFIG_DIR}/auth.json"
