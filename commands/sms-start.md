@@ -1,35 +1,16 @@
 # /sms-start
 
-Start monitoring a Claude session and sync with SMS server.
+Start monitoring a Claude session for SMS notifications.
 
 ## Usage
 
 ```
-/sms-start "Description of what you're working on"
+/sms-start "Fixing bug in auth.ts"
 ```
 
-## What happens
+## Arguments
 
-1. Validates authentication
-2. Generates unique session ID
-3. **Registers session with SMS server** (POST /sessions/start)
-4. Saves session data locally for hooks
-5. Displays confirmation with monitoring ID
-
-## Example
-
-```
-/sms-start "Implementing user authentication feature"
-```
-
-## Server Sync
-
-This command now syncs your Claude session with the SMS server, enabling:
-- Real-time error notifications via SMS
-- Session completion alerts
-- Idle timeout warnings
-
-The session remains active until you run `/sms-stop` or the session expires.
+- `description` - Description of what you're working on (shown in SMS)
 
 ```bash
 #!/bin/bash
