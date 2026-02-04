@@ -1,5 +1,5 @@
 #!/bin/bash
-# Handle tool errors and send SMS notification
+# Handle tool errors and send SMS notification via server
 
 # Read JSON input from stdin
 INPUT=$(cat)
@@ -10,43 +10,42 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 ERROR=$(echo "$INPUT" | jq -r '.error // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-# Get auth token from config
-AUTH_FILE="${HOME}/.config/claude-sms-notifier/auth.json"
-if [ ! -f "$AUTH_FILE" ]; then
-  exit 0
-fi
-
-AUTH_TOKEN=$(jq -r '.access_token // empty' "$AUTH_FILE")
-if [ -z "$AUTH_TOKEN" ]; then
-  exit 0
-fi
-
 # Get session file
-SESSION_FILE="/tmp/claude-sms-sessions/${SESSION_ID}.json"
+CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
+SESSION_FILE="${CONFIG_DIR}/session.json"
+AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
+
 if [ ! -f "$SESSION_FILE" ]; then
+  # No active session, nothing to do
   exit 0
 fi
 
-# Check if session is active
-IS_ACTIVE=$(jq -r '.is_active // false' "$SESSION_FILE")
-if [ "$IS_ACTIVE" != "true" ]; then
+# Extract session data
+MONITORING_ID=$(jq -r '.monitoring_id // empty' "$SESSION_FILE" 2>/dev/null)
+SESSION_TOKEN=$(jq -r '.session_token // empty' "$SESSION_FILE" 2>/dev/null)
+
+if [ -z "$MONITORING_ID" ] || [ -z "$SESSION_TOKEN" ]; then
   exit 0
 fi
 
 # Check if this is a blocking error (not file not found, etc.)
-BLOCKING_PATTERNS="permission denied|rate limit|fatal|crash|connection refused|unauthorized"
+BLOCKING_PATTERNS="permission denied|rate limit|fatal|crash|connection refused|unauthorized|authentication failed"
 if echo "$ERROR" | grep -qiE "$BLOCKING_PATTERNS"; then
-  # Send error notification
-  SERVER_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
+  # Get timestamp
+  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   
-  curl -s -X POST "${SERVER_URL}/sessions/${SESSION_ID}/events" \
-    -H "Authorization: Bearer ${AUTH_TOKEN}" \
+  # Send error event to server
+  curl -s -X POST "${AUTH_URL}/sessions/${MONITORING_ID}/events" \
+    -H "Authorization: Bearer ${SESSION_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{
-      \"type\": \"error\",
-      \"tool_name\": \"${TOOL_NAME}\",
-      \"error\": \"${ERROR}\",
-      \"cwd\": \"${CWD}\"
+      \"event_type\": \"error\",
+      \"timestamp\": \"${TIMESTAMP}\",
+      \"details\": {
+        \"tool_name\": \"${TOOL_NAME}\",
+        \"error\": \"${ERROR}\",
+        \"cwd\": \"${CWD}\"
+      }
     }" > /dev/null 2>&1
 fi
 
