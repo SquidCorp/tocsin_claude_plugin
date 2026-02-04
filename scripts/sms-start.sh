@@ -30,8 +30,8 @@ if [ -z "$AUTH_TOKEN" ]; then
   exit 1
 fi
 
-# Generate unique session ID
-CLAUDE_SESSION_ID=$(uuidgen 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())" 2>/dev/null || date +%s%N)
+# Get session from claude env 
+CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID:-}"
 
 # Get hostname
 HOSTNAME=$(hostname 2>/dev/null || echo "unknown")
