@@ -7,6 +7,17 @@ AUTH_URL="${CLAUDE_SMS_AUTH_URL:-https://sms.shadowemployee.xyz}"
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SETUP_ID_FILE="${CONFIG_DIR}/.setup_id"
 
+# Phone number validation function (E.164 format)
+validate_phone() {
+  local phone="$1"
+  if [[ ! "$phone" =~ ^\+[1-9][0-9]{1,14}$ ]]; then
+    echo "❌ Error: Invalid phone number format."
+    echo "Use E.164 format: +1234567890 (max 15 digits)"
+    return 1
+  fi
+  return 0
+}
+
 # Parse arguments
 REMOTE_MODE=false
 PHONE=""
@@ -63,9 +74,7 @@ echo ""
 # Remote mode: call API directly, skip browser
 if [ "$REMOTE_MODE" = true ]; then
   # Validate phone number format (E.164)
-  if [[ ! "$PHONE" =~ ^\+[1-9][0-9]{1,14}$ ]]; then
-    echo "❌ Error: Invalid phone number format."
-    echo "Use E.164 format: +1234567890"
+  if ! validate_phone "$PHONE"; then
     exit 1
   fi
 
