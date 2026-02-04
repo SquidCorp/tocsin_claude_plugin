@@ -1,6 +1,6 @@
-import type { SmsApiClient } from './api-client';
-import type { SessionState } from './types';
-import { logger } from './utils';
+import { SmsApiClient } from "./api-client";
+import { SessionState } from "./types";
+import { logger } from "./utils";
 
 export interface TimerManager {
   heartbeatInterval: Timer | null;
@@ -13,24 +13,22 @@ export function startTimers(
   client: SmsApiClient,
   onInactivity: () => Promise<void>,
   getHeartbeatInterval: () => number,
-  getInactivityThreshold: () => number,
+  getInactivityThreshold: () => number
 ): void {
-  if (!state?.is_monitoring) {return;}
+  if (!state?.is_monitoring) return;
 
   // Heartbeat every 30 seconds
-  manager.heartbeatInterval = setInterval(() => {
-    void (async () => {
-      try {
-        if (state?.is_monitoring) {
-          await client.sendHeartbeat(state.monitoring_id, {
-            timestamp: new Date().toISOString(),
-            last_activity: state.last_activity,
-          });
-        }
-      } catch (err) {
-        logger.error('Heartbeat failed', err);
+  manager.heartbeatInterval = setInterval(async () => {
+    try {
+      if (state?.is_monitoring) {
+        await client.sendHeartbeat(state.monitoring_id, {
+          timestamp: new Date().toISOString(),
+          last_activity: state.last_activity,
+        });
       }
-    })();
+    } catch (err) {
+      logger.error("Heartbeat failed", err);
+    }
   }, getHeartbeatInterval());
 
   // Inactivity check
@@ -40,17 +38,15 @@ export function startTimers(
 export function resetInactivityTimer(
   manager: TimerManager,
   onInactivity: () => Promise<void>,
-  threshold: number,
+  threshold: number
 ): void {
   if (manager.inactivityTimer) {
     clearTimeout(manager.inactivityTimer);
   }
 
-  manager.inactivityTimer = setTimeout(() => {
-    void (async () => {
-      logger.info('Inactivity detected, sending waiting notification');
-      await onInactivity();
-    })();
+  manager.inactivityTimer = setTimeout(async () => {
+    logger.info("Inactivity detected, sending waiting notification");
+    await onInactivity();
   }, threshold);
 }
 

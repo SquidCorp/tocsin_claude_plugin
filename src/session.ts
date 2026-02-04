@@ -1,22 +1,22 @@
-import * as os from 'os';
-import type { SessionState } from './types';
-import type { SmsApiClient } from './api-client';
-import { loadEnv, logger } from './utils';
+import * as os from "os";
+import { SessionState } from "./types";
+import { SmsApiClient } from "./api-client";
+import { logger } from "./utils";
 import {
   ensureSessionDir,
   getSessionFilePath,
-  loadSessionFromFile,
   saveSessionToFile,
+  loadSessionFromFile,
   scheduleSessionFileDeletion,
-} from './session.storage';
+} from "./session.storage";
 import {
-  resetInactivityTimer,
+  TimerManager,
   startTimers,
+  resetInactivityTimer,
   stopTimers,
-  type TimerManager,
-} from './session.timers';
-import { stopSessionOnServer } from './session.lifecycle';
-import { reportEventToServer } from './session.events';
+} from "./session.timers";
+import { stopSessionOnServer } from "./session.lifecycle";
+import { reportEventToServer } from "./session.events";
 
 export class SessionManager {
   private client: SmsApiClient;
@@ -30,7 +30,7 @@ export class SessionManager {
 
   async startSession(claudeSessionId: string, description: string): Promise<void> {
     if (this.state?.is_monitoring) {
-      throw new Error('Session already being monitored. Use /sms-stop first.');
+      throw new Error("Session already being monitored. Use /sms-stop first.");
     }
 
     const hostname = os.hostname();
@@ -64,9 +64,9 @@ export class SessionManager {
     logger.info(`Session monitoring started: ${response.monitoring_id}`);
   }
 
-  async stopSession(reason: 'completed' | 'user_stop' | 'error' = 'user_stop'): Promise<void> {
+  async stopSession(reason: "completed" | "user_stop" | "error" = "user_stop"): Promise<void> {
     if (!this.state?.is_monitoring) {
-      throw new Error('No active session to stop');
+      throw new Error("No active session to stop");
     }
 
     stopTimers(this.timerManager);
@@ -79,10 +79,10 @@ export class SessionManager {
       scheduleSessionFileDeletion(this.sessionFile);
     }
 
-    logger.info('Session monitoring stopped');
+    logger.info("Session monitoring stopped");
   }
 
-  async reportEvent(eventType: 'error' | 'done' | 'waiting', details?: Record<string, unknown>): Promise<void> {
+  async reportEvent(eventType: "error" | "done" | "waiting", details?: Record<string, unknown>): Promise<void> {
     if (!this.state?.is_monitoring) {
       logger.debug(`Event ${eventType} ignored - no active monitoring`);
       return;
@@ -92,15 +92,15 @@ export class SessionManager {
   }
 
   recordActivity(): void {
-    if (!this.state?.is_monitoring) {return;}
+    if (!this.state?.is_monitoring) return;
 
     this.state.last_activity = new Date().toISOString();
     resetInactivityTimer(
       this.timerManager,
-      () => this.reportEvent('waiting', { reason: '10_minutes_inactivity' }),
-      this.getEnv().CLAUDE_SMS_INACTIVITY_THRESHOLD,
+      () => this.reportEvent("waiting", { reason: "10_minutes_inactivity" }),
+      this.getEnv().CLAUDE_SMS_INACTIVITY_THRESHOLD
     );
-    this.saveState().catch((err) => logger.error('Failed to save state', err));
+    this.saveState().catch((err) => logger.error("Failed to save state", err));
   }
 
   private startTimers(): void {
@@ -108,14 +108,14 @@ export class SessionManager {
       this.timerManager,
       this.state,
       this.client,
-      () => this.reportEvent('waiting', { reason: '10_minutes_inactivity' }),
+      () => this.reportEvent("waiting", { reason: "10_minutes_inactivity" }),
       () => this.getEnv().CLAUDE_SMS_HEARTBEAT_INTERVAL,
-      () => this.getEnv().CLAUDE_SMS_INACTIVITY_THRESHOLD,
+      () => this.getEnv().CLAUDE_SMS_INACTIVITY_THRESHOLD
     );
   }
 
   private async saveState(): Promise<void> {
-    if (!this.sessionFile || !this.state) {return;}
+    if (!this.sessionFile || !this.state) return;
     await saveSessionToFile(this.sessionFile, this.state);
   }
 
@@ -128,7 +128,7 @@ export class SessionManager {
       this.sessionFile = sessionFile;
       this.client.setAccessToken(loadedState.session_token);
       this.startTimers();
-      logger.info('Session restored from file');
+      logger.info("Session restored from file");
       return true;
     }
     return false;
@@ -143,6 +143,7 @@ export class SessionManager {
   }
 
   private getEnv() {
+    const { loadEnv } = require("./utils");
     return loadEnv();
   }
 }

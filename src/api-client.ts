@@ -1,22 +1,22 @@
 import {
-  type ApiError,
+  AuthToken,
+  StartSessionRequest,
+  StartSessionResponse,
+  EventRequest,
+  EventResponse,
+  HeartbeatRequest,
+  StopSessionRequest,
+  ApiError,
   ApiErrorSchema,
-  type AuthToken,
-  type EventRequest,
-  type EventResponse,
-  type HeartbeatRequest,
-  type StartSessionRequest,
-  type StartSessionResponse,
-  type StopSessionRequest,
-} from './types';
-import { logger } from './utils';
+} from "./types";
+import { logger } from "./utils";
 
 export class SmsApiClient {
   private baseUrl: string;
   private accessToken: string | null = null;
 
   constructor(authUrl: string) {
-    this.baseUrl = authUrl.replace(/\/$/, '');
+    this.baseUrl = authUrl.replace(/\/$/, "");
   }
 
   setAccessToken(token: string) {
@@ -25,16 +25,16 @@ export class SmsApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...((options.headers as Record<string, string>) || {}),
     };
 
     if (this.accessToken) {
-      headers.Authorization = `Bearer ${this.accessToken}`;
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
     try {
@@ -64,10 +64,10 @@ export class SmsApiClient {
   async exchangePairingCode(
     tempToken: string,
     pairingCode: string,
-    deviceFingerprint: string,
+    deviceFingerprint: string
   ): Promise<AuthToken> {
-    return this.request<AuthToken>('/auth/exchange', {
-      method: 'POST',
+    return this.request<AuthToken>("/auth/exchange", {
+      method: "POST",
       body: JSON.stringify({
         temp_token: tempToken,
         pairing_code: pairingCode,
@@ -78,17 +78,17 @@ export class SmsApiClient {
 
   // Refresh access token
   async refreshToken(): Promise<AuthToken> {
-    return this.request<AuthToken>('/auth/refresh', {
-      method: 'POST',
+    return this.request<AuthToken>("/auth/refresh", {
+      method: "POST",
     });
   }
 
   // Start session monitoring
   async startSession(
-    request: StartSessionRequest,
+    request: StartSessionRequest
   ): Promise<StartSessionResponse> {
-    return this.request<StartSessionResponse>('/sessions/start', {
-      method: 'POST',
+    return this.request<StartSessionResponse>("/sessions/start", {
+      method: "POST",
       body: JSON.stringify(request),
     });
   }
@@ -96,24 +96,24 @@ export class SmsApiClient {
   // Report event (error, done, waiting)
   async reportEvent(
     monitoringId: string,
-    request: EventRequest,
+    request: EventRequest
   ): Promise<EventResponse> {
     return this.request<EventResponse>(
       `/sessions/${monitoringId}/events`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(request),
-      },
+      }
     );
   }
 
   // Send heartbeat
   async sendHeartbeat(
     monitoringId: string,
-    request: HeartbeatRequest,
+    request: HeartbeatRequest
   ): Promise<void> {
     await this.request<void>(`/sessions/${monitoringId}/heartbeat`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(request),
     });
   }
@@ -121,18 +121,18 @@ export class SmsApiClient {
   // Stop session monitoring
   async stopSession(
     monitoringId: string,
-    request: StopSessionRequest,
+    request: StopSessionRequest
   ): Promise<void> {
     await this.request<void>(`/sessions/${monitoringId}/stop`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(request),
     });
   }
 
   // Logout / revoke token
   async logout(): Promise<void> {
-    await this.request<void>('/auth/logout', {
-      method: 'POST',
+    await this.request<void>("/auth/logout", {
+      method: "POST",
     });
   }
 }
@@ -140,6 +140,6 @@ export class SmsApiClient {
 export class SmsApiError extends Error {
   constructor(public readonly error: ApiError) {
     super(error.message);
-    this.name = 'SmsApiError';
+    this.name = "SmsApiError";
   }
 }

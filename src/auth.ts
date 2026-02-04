@@ -1,13 +1,13 @@
-import * as os from 'os';
-import type { AuthToken } from './types';
-import { SmsApiClient, SmsApiError } from './api-client';
-import { logger } from './utils';
+import * as os from "os";
+import { AuthToken } from "./types";
+import { SmsApiClient, SmsApiError } from "./api-client";
+import { logger } from "./utils";
 import {
-  clearTokenFile,
   ensureConfigDir,
   loadTokenFromFile,
   saveTokenToFile,
-} from './token.storage';
+  clearTokenFile,
+} from "./token.storage";
 
 export class AuthManager {
   private client: SmsApiClient;
@@ -23,7 +23,7 @@ export class AuthManager {
       this.token = await loadTokenFromFile();
 
       if (this.token) {
-        if (this.shouldRefreshToken()) {
+        if (await this.shouldRefreshToken()) {
           await this.refreshToken();
         } else {
           this.client.setAccessToken(this.token.access_token);
@@ -32,13 +32,13 @@ export class AuthManager {
       }
       return false;
     } catch (err) {
-      logger.error('Failed to initialize auth', err);
+      logger.error("Failed to initialize auth", err);
       return false;
     }
   }
 
-  private shouldRefreshToken(): boolean {
-    if (!this.token) {return false;}
+  private async shouldRefreshToken(): Promise<boolean> {
+    if (!this.token) return false;
     const expiresAt = new Date(this.token.expires_at);
     const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000);
     return expiresAt < oneHourFromNow;
@@ -47,18 +47,18 @@ export class AuthManager {
   async clearToken(): Promise<void> {
     await clearTokenFile();
     this.token = null;
-    this.client.setAccessToken('');
+    this.client.setAccessToken("");
   }
 
   async exchangePairingCode(
     tempToken: string,
-    pairingCode: string,
+    pairingCode: string
   ): Promise<void> {
-    const deviceFingerprint = this.getDeviceFingerprint();
+    const deviceFingerprint = await this.getDeviceFingerprint();
     const token = await this.client.exchangePairingCode(
       tempToken,
       pairingCode,
-      deviceFingerprint,
+      deviceFingerprint
     );
     await this.saveToken(token);
   }
@@ -71,7 +71,7 @@ export class AuthManager {
 
   async refreshToken(): Promise<void> {
     if (!this.token) {
-      throw new Error('No token to refresh');
+      throw new Error("No token to refresh");
     }
 
     this.client.setAccessToken(this.token.access_token);
@@ -80,8 +80,8 @@ export class AuthManager {
       const newToken = await this.client.refreshToken();
       await this.saveToken(newToken);
     } catch (err) {
-      if (err instanceof SmsApiError && err.error.error === 'token_expired') {
-        logger.warn('Token expired, user needs to re-authenticate');
+      if (err instanceof SmsApiError && err.error.error === "token_expired") {
+        logger.warn("Token expired, user needs to re-authenticate");
         await this.clearToken();
       }
       throw err;
@@ -92,8 +92,8 @@ export class AuthManager {
     if (this.token) {
       try {
         await this.client.logout();
-      } catch {
-        logger.warn('Logout API call failed, clearing local token anyway');
+      } catch (err) {
+        logger.warn("Logout API call failed, clearing local token anyway");
       }
     }
     await this.clearToken();
@@ -111,9 +111,9 @@ export class AuthManager {
     return this.client;
   }
 
-  private getDeviceFingerprint(): string {
+  private async getDeviceFingerprint(): Promise<string> {
     const hostname = os.hostname();
-    const { username } = os.userInfo();
+    const username = os.userInfo().username;
     const data = `${hostname}-${username}`;
 
     let hash = 0;

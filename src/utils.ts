@@ -1,9 +1,9 @@
-import { type Env, EnvSchema } from './types';
+import { EnvSchema, Env } from "./types";
 
 let cachedEnv: Env | null = null;
 
 export function loadEnv(): Env {
-  if (cachedEnv) {return cachedEnv;}
+  if (cachedEnv) return cachedEnv;
 
   const result = EnvSchema.safeParse({
     CLAUDE_SMS_AUTH_URL: process.env.CLAUDE_SMS_AUTH_URL,
@@ -14,7 +14,7 @@ export function loadEnv(): Env {
 
   if (!result.success) {
     throw new Error(
-      `Invalid environment variables: ${result.error.message}`,
+      `Invalid environment variables: ${result.error.message}`
     );
   }
 
@@ -28,21 +28,21 @@ export function clearEnvCache(): void {
 
 export const logger = {
   debug: (message: string, ...args: unknown[]) => {
-    if (shouldLog('debug')) {console.error(`[DEBUG] ${message}`, ...args);}
+    if (shouldLog("debug")) console.error(`[DEBUG] ${message}`, ...args);
   },
   info: (message: string, ...args: unknown[]) => {
-    if (shouldLog('info')) {console.error(`[INFO] ${message}`, ...args);}
+    if (shouldLog("info")) console.error(`[INFO] ${message}`, ...args);
   },
   warn: (message: string, ...args: unknown[]) => {
-    if (shouldLog('warn')) {console.error(`[WARN] ${message}`, ...args);}
+    if (shouldLog("warn")) console.error(`[WARN] ${message}`, ...args);
   },
   error: (message: string, ...args: unknown[]) => {
-    if (shouldLog('error')) {console.error(`[ERROR] ${message}`, ...args);}
+    if (shouldLog("error")) console.error(`[ERROR] ${message}`, ...args);
   },
 };
 
-function shouldLog(level: Env['CLAUDE_SMS_LOG_LEVEL']): boolean {
-  const levels = ['debug', 'info', 'warn', 'error'] as const;
+function shouldLog(level: Env["CLAUDE_SMS_LOG_LEVEL"]): boolean {
+  const levels = ["debug", "info", "warn", "error"] as const;
   const envLevel = loadEnv().CLAUDE_SMS_LOG_LEVEL;
   const currentIndex = levels.indexOf(level);
   const envIndex = levels.indexOf(envLevel);
@@ -58,6 +58,6 @@ export function generateSessionId(): string {
 
 // Format phone number for display (mask middle digits)
 export function maskPhone(phone: string): string {
-  if (phone.length <= 8) {return phone;}
-  return `${phone.substring(0, 4)  }***${  phone.substring(phone.length - 4)}`;
+  if (phone.length <= 8) return phone;
+  return phone.substring(0, 4) + "***" + phone.substring(phone.length - 4);
 }

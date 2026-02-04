@@ -1,11 +1,11 @@
-import { z } from 'zod/v4';
+import { z } from "zod/v4";
 
 // Environment variables schema
 export const EnvSchema = z.object({
   CLAUDE_SMS_AUTH_URL: z.string().url(),
   CLAUDE_SMS_HEARTBEAT_INTERVAL: z.coerce.number().default(30000),
   CLAUDE_SMS_INACTIVITY_THRESHOLD: z.coerce.number().default(600000),
-  CLAUDE_SMS_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  CLAUDE_SMS_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -48,22 +48,31 @@ export const StartSessionRequestSchema = z.object({
   started_at: z.string().datetime(),
 });
 
-export type StartSessionRequest = z.infer<typeof StartSessionRequestSchema>;
-
 export const StartSessionResponseSchema = z.object({
   session_token: z.string(),
   monitoring_id: z.string(),
 });
 
-export type StartSessionResponse = z.infer<typeof StartSessionResponseSchema>;
+// Error categories for better SMS messages
+export const ErrorCategorySchema = z.enum([
+  "rate_limit",
+  "permission", 
+  "network",
+  "fatal",
+  "error"
+]);
+export type ErrorCategory = z.infer<typeof ErrorCategorySchema>;
 
 export const EventRequestSchema = z.object({
-  event_type: z.enum(['error', 'done', 'waiting']),
+  event_type: z.enum(["error", "done", "waiting"]),
   timestamp: z.string().datetime(),
-  details: z.record(z.unknown()).optional(),
+  details: z.object({
+    hook: z.string().optional(),
+    category: ErrorCategorySchema.optional(),
+    tool: z.string().optional(),
+    preview: z.string().optional(),
+  }).passthrough().optional(),
 });
-
-export type EventRequest = z.infer<typeof EventRequestSchema>;
 
 export const EventResponseSchema = z.object({
   sms_sent: z.boolean(),
@@ -72,22 +81,16 @@ export const EventResponseSchema = z.object({
   next_allowed_at: z.string().datetime().optional(),
 });
 
-export type EventResponse = z.infer<typeof EventResponseSchema>;
-
 export const HeartbeatRequestSchema = z.object({
   timestamp: z.string().datetime(),
   last_activity: z.string().datetime(),
 });
 
-export type HeartbeatRequest = z.infer<typeof HeartbeatRequestSchema>;
-
 export const StopSessionRequestSchema = z.object({
-  reason: z.enum(['completed', 'user_stop', 'error']),
-  final_state: z.enum(['success', 'error', 'cancelled']),
+  reason: z.enum(["completed", "user_stop", "error"]),
+  final_state: z.enum(["success", "error", "cancelled"]),
   ended_at: z.string().datetime(),
 });
-
-export type StopSessionRequest = z.infer<typeof StopSessionRequestSchema>;
 
 // Error response
 export const ApiErrorSchema = z.object({
@@ -96,7 +99,5 @@ export const ApiErrorSchema = z.object({
   details: z.record(z.unknown()).optional(),
   request_id: z.string(),
 });
-
-export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;

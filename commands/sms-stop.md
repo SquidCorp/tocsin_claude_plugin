@@ -1,6 +1,6 @@
 # /sms-stop
 
-Stop monitoring the current session. No more SMS notifications.
+Stop monitoring the current session.
 
 ## Usage
 
@@ -8,16 +8,7 @@ Stop monitoring the current session. No more SMS notifications.
 /sms-stop
 ```
 
-## Example
-
+```bash
+#!/bin/bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-stop.sh"
 ```
-You: /sms-stop
-Claude: ✅ SMS monitoring stopped
-       Session duration: 45 minutes
-       SMS sent: 1 (waiting notification)
-```
-
-## Notes
-
-- Automatically called when session ends
-- Use this if you want to stop monitoring early
