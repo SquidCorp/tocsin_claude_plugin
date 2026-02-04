@@ -1,18 +1,17 @@
 #!/bin/bash
 # Handle tool errors and send SMS notification via server
+set -e
 
-# Claude Code provides data via environment variables
-TOOL_NAME="${CLAUDE_HOOK_TOOL_NAME:-unknown}"
-ERROR="${CLAUDE_HOOK_ERROR_OUTPUT:-}"
-SESSION_ID="${CLAUDE_SESSION_ID:-}"
-CWD="${PWD}"
+# Read JSON input from stdin
+INPUT=$(cat)
 
-# Early exit if no error
-if [ -z "$ERROR" ]; then
-  exit 0
-fi
+# Extract session ID if available
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
+ERROR=$(echo "$INPUT" | jq -r '.error // empty')
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-# Get session file (rest of script unchanged)
+# Get session file
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SESSION_FILE="${CONFIG_DIR}/session.json"
 AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
