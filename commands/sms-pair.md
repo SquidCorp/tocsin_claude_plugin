@@ -1,29 +1,18 @@
 # /sms-pair
 
-Complete authentication by entering your 6-digit pairing code from SMS.
+Complete SMS authentication with your pairing code.
 
 ## Usage
 
 ```
-/sms-pair <code>
+/sms-pair 123456
 ```
 
 ## Arguments
 
-- `code` (required) - The 6-digit code you received via SMS
+- `code` - The 6-digit code from SMS
 
-## Example
-
+```bash
+#!/bin/bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-pair.sh" "${ARGUMENTS}"
 ```
-You: /sms-pair 847291
-Claude: ✅ Authentication successful!
-       Phone: +1***8912
-       Expires: 2026-02-03 15:30 UTC
-       
-       You can now start monitoring sessions with /sms-start
-```
-
-## Errors
-
-- "Invalid pairing code" - Code expired or wrong
-- "Token expired" - Temporary token expired, restart with `/sms-setup`

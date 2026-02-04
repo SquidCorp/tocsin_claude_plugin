@@ -1,4 +1,5 @@
 {
+  "description": "SMS notifications for Claude Code events",
   "hooks": {
     "PostToolUseFailure": [
       {
@@ -6,7 +7,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/src/handle-error.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-error.sh",
+            "env": {
+              "CLAUDE_HOOK_TOOL_NAME": "{{toolName}}",
+              "CLAUDE_HOOK_ERROR_OUTPUT": "{{errorOutput}}"
+            }
           }
         ]
       }
@@ -16,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/src/handle-activity.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-activity.sh"
           }
         ]
       }
@@ -26,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/src/handle-session-end.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-session-end.sh"
           }
         ]
       }

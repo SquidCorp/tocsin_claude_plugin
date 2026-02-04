@@ -1,6 +1,6 @@
 # /sms-logout
 
-Revoke authentication and clear all stored credentials.
+Logout and remove authentication.
 
 ## Usage
 
@@ -8,23 +8,7 @@ Revoke authentication and clear all stored credentials.
 /sms-logout
 ```
 
-## Example
-
+```bash
+#!/bin/bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-logout.sh"
 ```
-You: /sms-logout
-Claude: ✅ Logged out successfully
-       All sessions cleared: 3
-       Your phone number has been unlinked.
-```
-
-## What it does
-
-- Revokes the auth token on the server
-- Clears local token storage
-- Stops any active monitoring
-
-## When to use
-
-- Switching to a different phone number
-- Uninstalling the plugin
-- Security concerns

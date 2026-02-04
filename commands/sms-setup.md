@@ -1,40 +1,34 @@
 # /sms-setup
 
-Start the SMS authentication flow. This will:
-
-1. Open your browser to the authentication page
-2. Ask for your phone number
-3. Send you a 6-digit pairing code via SMS
-4. Wait for you to enter the code with `/sms-pair`
+Start the SMS authentication flow.
 
 ## Usage
 
 ```
 /sms-setup
+/sms-setup --remote +1234567890
 ```
+
+## Options
+
+- `--remote <phone>`: Skip browser and send SMS directly (for SSH/headless sessions)
 
 ## What happens
 
-After running this command:
-1. Your browser opens to the auth server
-2. You enter your phone number
-3. You receive an SMS with a 6-digit code
-4. You run `/sms-pair 123456` (with your actual code)
-5. Authentication is complete!
+**Browser mode (default):**
+1. Generates unique setup ID
+2. Opens browser to login page
+3. You enter phone number
+4. Server sends SMS with pairing code
+5. Run `/sms-pair CODE` to complete
 
-## Authentication lasts
+**Remote mode (`--remote`):**
+1. Generates unique setup ID
+2. Calls server API directly with your phone number
+3. Server sends SMS immediately
+4. Run `/sms-pair CODE` when SMS arrives
 
-36 hours. After that, you'll need to run `/sms-setup` again.
-
-## Environment Required
-
-- `CLAUDE_SMS_AUTH_URL` - Your auth server URL
-
-## Example
-
-```
-You: /sms-setup
-Claude: Opening browser for SMS authentication...
-       Check your phone for a 6-digit code.
-       Then run: /sms-pair 123456
+```bash
+#!/bin/bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-setup.sh" "$@"
 ```
