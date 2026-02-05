@@ -3,7 +3,7 @@
 
 set -e
 
-AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
+AUTH_URL="${CLAUDE_SMS_AUTH_URL:-https://sms.shadowemployee.xyz}"
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
 SETUP_ID_FILE="${CONFIG_DIR}/.setup_id"
 TOKEN_FILE="${CONFIG_DIR}/auth.json"
@@ -38,10 +38,14 @@ RESPONSE=$(curl -s -X POST "${AUTH_URL}/auth/exchange-by-setup" \
   -H "Content-Type: application/json" \
   -d "{\"setup_id\":\"${SETUP_ID}\",\"pairing_code\":\"${CODE}\"}" 2>/dev/null)
 
-# Check for errors
-if echo "$RESPONSE" | grep -q '"error"'; then
-  ERROR=$(echo "$RESPONSE" | grep -o '"message":"[^"]*"' | head -1 | cut -d'"' -f4)
-  echo "❌ Exchange failed: ${ERROR:-Invalid code or expired setup}"
+# Validate response contains access_token (proper success indicator)
+if ! echo "$RESPONSE" | jq -e '.access_token' > /dev/null 2>&1; then
+  # Extract error message from response (handles both JSON {"message":"..."} and plain text)
+  ERROR=$(echo "$RESPONSE" | jq -r '.message // . // "Unknown error"' 2>/dev/null || echo "$RESPONSE")
+  echo "❌ Exchange failed: ${ERROR}"
+  echo ""
+  echo "The pairing code may have expired or be invalid."
+  echo "Run /sms-setup to generate a new code."
   exit 1
 fi
 
@@ -49,12 +53,20 @@ fi
 echo "$RESPONSE" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
 
-# Clean up setup_id
-rm -f "$SETUP_ID_FILE"
+# Extract and validate required fields
+PHONE=$(echo "$RESPONSE" | jq -r '.phone // empty')
+EXPIRES=$(echo "$RESPONSE" | jq -r '.expires_at // empty')
 
-# Extract info
-PHONE=$(echo "$RESPONSE" | grep -o '"phone":"[^"]*"' | cut -d'"' -f4)
-EXPIRES=$(echo "$RESPONSE" | grep -o '"expires_at":"[^"]*"' | cut -d'"' -f4)
+if [ -z "$PHONE" ] || [ -z "$EXPIRES" ]; then
+  echo "❌ Error: Invalid response from server"
+  echo "Response received:"
+  cat "$TOKEN_FILE"
+  rm -f "$TOKEN_FILE"
+  exit 1
+fi
+
+# Only clean up setup_id after confirmed success
+rm -f "$SETUP_ID_FILE"
 
 echo "✅ Authentication successful!"
 echo "   Phone: ${PHONE}"
