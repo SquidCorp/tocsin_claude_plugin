@@ -1,11 +1,11 @@
 #!/bin/bash
-# sms-pair.sh - Exchange pairing code for auth token using setup_id
+# sms-pair.sh - Exchange pairing code for auth token using temp_token
 
 set -e
 
-AUTH_URL="${CLAUDE_SMS_AUTH_URL:-https://sms.shadowemployee.xyz}"
+AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
-SETUP_ID_FILE="${CONFIG_DIR}/.setup_id"
+TEMP_TOKEN_FILE="${CONFIG_DIR}/.temp_token"
 TOKEN_FILE="${CONFIG_DIR}/auth.json"
 CODE="$1"
 
@@ -16,27 +16,46 @@ if [ -z "$CODE" ] || ! echo "$CODE" | grep -qE '^[0-9]{6}$'; then
   exit 1
 fi
 
-# Read setup_id
-if [ ! -f "$SETUP_ID_FILE" ]; then
-  echo "❌ Error: No setup ID found."
+# Read temp_token
+if [ ! -f "$TEMP_TOKEN_FILE" ]; then
+  echo "❌ Error: No setup in progress."
   echo "   Run /sms-setup first."
   exit 1
 fi
 
-SETUP_ID=$(cat "$SETUP_ID_FILE")
-if [ -z "$SETUP_ID" ]; then
-  echo "❌ Error: Invalid setup ID."
-  rm -f "$SETUP_ID_FILE"
+TEMP_TOKEN=$(cat "$TEMP_TOKEN_FILE")
+if [ -z "$TEMP_TOKEN" ]; then
+  echo "❌ Error: Invalid temporary token."
+  rm -f "$TEMP_TOKEN_FILE"
   exit 1
 fi
+
+# Generate stable device fingerprint (workspace-based)
+generate_device_fingerprint() {
+  local workspace_path="${PWD}"
+  local hostname="$(hostname 2>/dev/null || echo 'unknown')"
+  local fingerprint_base="${workspace_path}:${hostname}"
+
+  # Create hash of workspace + hostname
+  if command -v md5 >/dev/null 2>&1; then
+    echo -n "$fingerprint_base" | md5 | cut -c1-16
+  elif command -v md5sum >/dev/null 2>&1; then
+    echo -n "$fingerprint_base" | md5sum | cut -c1-16
+  else
+    # Fallback to simple truncation
+    echo -n "$fingerprint_base" | cut -c1-16
+  fi
+}
+
+DEVICE_FINGERPRINT=$(generate_device_fingerprint)
 
 echo "🦞 Exchanging pairing code ${CODE}..."
 echo ""
 
-# Call exchange endpoint with setup_id
-RESPONSE=$(curl -s -X POST "${AUTH_URL}/auth/exchange-by-setup" \
+# Call exchange endpoint with temp_token (spec-compliant)
+RESPONSE=$(curl -s -X POST "${AUTH_URL}/auth/exchange" \
   -H "Content-Type: application/json" \
-  -d "{\"setup_id\":\"${SETUP_ID}\",\"pairing_code\":\"${CODE}\"}" 2>/dev/null)
+  -d "{\"temp_token\":\"${TEMP_TOKEN}\",\"pairing_code\":\"${CODE}\",\"device_fingerprint\":\"${DEVICE_FINGERPRINT}\"}" 2>/dev/null)
 
 # Validate response contains access_token (proper success indicator)
 if ! echo "$RESPONSE" | jq -e '.access_token' > /dev/null 2>&1; then
@@ -65,8 +84,8 @@ if [ -z "$PHONE" ] || [ -z "$EXPIRES" ]; then
   exit 1
 fi
 
-# Only clean up setup_id after confirmed success
-rm -f "$SETUP_ID_FILE"
+# Only clean up temp_token after confirmed success
+rm -f "$TEMP_TOKEN_FILE"
 
 echo "✅ Authentication successful!"
 echo "   Phone: ${PHONE}"

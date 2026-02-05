@@ -5,7 +5,7 @@ set -e
 
 AUTH_URL="${CLAUDE_SMS_SERVER_URL:-https://sms.shadowemployee.xyz}"
 CONFIG_DIR="${HOME}/.config/claude-sms-notifier"
-SETUP_ID_FILE="${CONFIG_DIR}/.setup_id"
+TEMP_TOKEN_FILE="${CONFIG_DIR}/.temp_token"
 
 # Parse arguments
 REMOTE_MODE=false
@@ -52,12 +52,10 @@ fi
 # Create config directory
 mkdir -p "$CONFIG_DIR"
 
-# Generate unique setup_id
-SETUP_ID=$(uuidgen 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())" 2>/dev/null || date +%s%N)
-echo "$SETUP_ID" > "$SETUP_ID_FILE"
-chmod 600 "$SETUP_ID_FILE"
+# Generate CSRF state nonce
+STATE=$(uuidgen 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())" 2>/dev/null || echo "state-$(date +%s)")
 
-echo "📋 Setup ID: ${SETUP_ID:0:8}..."
+echo "🔐 Initiating authentication flow..."
 echo ""
 
 # Remote mode: call API directly, skip browser
@@ -72,31 +70,35 @@ if [ "$REMOTE_MODE" = true ]; then
   echo "📱 Sending SMS to ${PHONE}..."
   echo ""
 
-  # Call server API directly
-  RESPONSE=$(curl -s -X POST "${AUTH_URL}/login/submit-with-setup" \
+  # Call server API directly (spec-compliant /login endpoint)
+  RESPONSE=$(curl -s -X POST "${AUTH_URL}/login" \
     -H "Content-Type: application/json" \
-    -d "{\"phone\":\"${PHONE}\",\"setup_id\":\"${SETUP_ID}\"}" \
+    -d "{\"phone\":\"${PHONE}\",\"state\":\"${STATE}\",\"mode\":\"remote\"}" \
     --max-time 10 2>/dev/null) || {
     echo "❌ Error: Could not reach SMS server."
     echo "Try without --remote flag for browser-based setup."
     exit 1
   }
 
-  # Check if response contains pairing_code
-  if echo "$RESPONSE" | grep -q '"pairing_code"'; then
-    PAIRING_CODE=$(echo "$RESPONSE" | grep -o '"pairing_code":"[0-9]*"' | grep -o '[0-9]*')
-    echo "✅ SMS sent successfully!"
-    echo ""
-    echo "Check your phone for the pairing code."
-    echo "Then run: /sms-pair ${PAIRING_CODE}"
-  else
-    echo "❌ Error: Failed to send SMS."
+  # Extract temp_token from response (spec-compliant field)
+  TEMP_TOKEN=$(echo "$RESPONSE" | grep -o '"temp_token":"[^"]*"' | cut -d'"' -f4)
+
+  if [ -z "$TEMP_TOKEN" ]; then
+    echo "❌ Error: Failed to initiate authentication."
     echo "Response: ${RESPONSE}"
     exit 1
   fi
 
+  # Store temp_token securely
+  echo "$TEMP_TOKEN" > "$TEMP_TOKEN_FILE"
+  chmod 600 "$TEMP_TOKEN_FILE"
+
+  echo "✅ SMS sent successfully!"
   echo ""
-  echo "⏳ Setup ID valid for 10 minutes."
+  echo "Check your phone for a 6-digit code, then run:"
+  echo "  /sms-pair <code>"
+  echo ""
+  echo "⏳ Pairing code valid for 5 minutes."
   exit 0
 fi
 
@@ -104,8 +106,8 @@ fi
 echo "📱 Opening browser for authentication..."
 echo ""
 
-# Build auth URL with setup_id
-AUTH_URL_FULL="${AUTH_URL}/login?setup_id=${SETUP_ID}"
+# Build auth URL with state parameter
+AUTH_URL_FULL="${AUTH_URL}/login?state=${STATE}"
 
 # Open browser
 case "$(uname -s)" in
@@ -120,4 +122,4 @@ echo "1. Enter your phone number on the webpage"
 echo "2. Wait for SMS with the pairing code"
 echo "3. Run: /sms-pair YOUR_6_DIGIT_CODE"
 echo ""
-echo "⏳ Setup ID valid for 10 minutes."
+echo "⏳ Pairing code valid for 5 minutes."
