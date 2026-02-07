@@ -19,8 +19,15 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
-const PLUGIN_NAME = "tocsin-claude-plugin";
-const PLUGIN_DIR = path.join(os.homedir(), ".claude", "plugins", PLUGIN_NAME);
+const PLUGIN_NAME = "tocsin";
+const PLUGIN_VERSION = "1.0.0";
+// Claude Code caches plugins in this structure
+const PLUGIN_DIR = path.join(
+  os.homedir(),
+  ".claude/plugins/cache/local",
+  PLUGIN_NAME,
+  PLUGIN_VERSION
+);
 const SOURCE_DIR = path.join(__dirname, "..");
 
 /**
@@ -98,7 +105,18 @@ function checkPrerequisites() {
 function copyPluginFiles() {
   console.log("📂 Copying plugin files...\n");
 
-  // Create plugin directory
+  // Clean up old orphaned installation if it exists
+  const oldPluginDir = path.join(os.homedir(), ".claude", "plugins", "tocsin-claude-plugin");
+  if (fs.existsSync(oldPluginDir)) {
+    try {
+      fs.rmSync(oldPluginDir, { recursive: true, force: true });
+      console.log("  ✓ Cleaned up old installation");
+    } catch (error) {
+      // Continue even if cleanup fails
+    }
+  }
+
+  // Create plugin directory (Claude Code cache structure)
   if (!fs.existsSync(PLUGIN_DIR)) {
     fs.mkdirSync(PLUGIN_DIR, { recursive: true });
   }
