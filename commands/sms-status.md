@@ -18,7 +18,7 @@ Check the current status of SMS monitoring, authentication, and heartbeat daemon
 ## Example Output
 
 ```
-🦞 Claude SMS Notifier - Status
+🔔 Tocsin_ - Status
 ================================
 
 🔑 Authentication:
@@ -47,5 +47,5 @@ Check the current status of SMS monitoring, authentication, and heartbeat daemon
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-status.sh"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-status.js"
 ```

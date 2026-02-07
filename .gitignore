@@ -32,4 +32,4 @@ Thumbs.db
 
 # User config (contains tokens)
 .config/
-**/.config/claude-sms-notifier/
+**/.config/tocsin/

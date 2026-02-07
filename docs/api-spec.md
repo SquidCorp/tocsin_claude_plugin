@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the API contract between the Claude Code plugin (`claude-sms-notifier`) and the external authentication/SMS server.
+This document defines the API contract between the Claude Code plugin (`tocsin`) and the external authentication/SMS server.
 
 ## Base URL
 

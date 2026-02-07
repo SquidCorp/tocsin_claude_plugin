@@ -5,7 +5,7 @@ Stop the current monitoring session and notify server.
 ## Usage
 
 ```
-/sms-stop
+/tocsin:sms-stop
 ```
 
 ## What happens
@@ -23,5 +23,5 @@ Stop the current monitoring session and notify server.
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-stop.sh" "$@"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-stop.js" "$@"
 ```

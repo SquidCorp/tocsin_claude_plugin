@@ -1,17 +1,15 @@
 {
-  "description": "SMS notifications for Claude Code events",
+  "description": "SMS notifications for Claude Code events - monitors errors, idle time, and task completion",
   "hooks": {
     "PostToolUseFailure": [
       {
-        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-error.sh",
-            "env": {
-              "CLAUDE_HOOK_TOOL_NAME": "{{toolName}}",
-              "CLAUDE_HOOK_ERROR_OUTPUT": "{{errorOutput}}"
-            }
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-error.js",
+            "async": true,
+            "timeout": 30,
+            "statusMessage": "Reporting error to SMS server..."
           }
         ]
       }
@@ -21,7 +19,37 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-activity.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-activity.js",
+            "async": true,
+            "timeout": 15,
+            "statusMessage": "Updating activity status..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-idle.js",
+            "async": true,
+            "timeout": 30,
+            "statusMessage": "Checking idle status..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-completion.js",
+            "async": true,
+            "timeout": 30,
+            "statusMessage": "Reporting task completion..."
           }
         ]
       }
@@ -31,7 +59,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-session-end.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/handle-session-end.js",
+            "timeout": 60,
+            "statusMessage": "Cleaning up session..."
           }
         ]
       }

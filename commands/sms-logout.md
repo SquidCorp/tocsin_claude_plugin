@@ -5,10 +5,10 @@ Logout and remove authentication.
 ## Usage
 
 ```
-/sms-logout
+/tocsin:sms-logout
 ```
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-logout.sh"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-logout.js"
 ```

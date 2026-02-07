@@ -5,7 +5,7 @@ Complete SMS authentication with your pairing code.
 ## Usage
 
 ```
-/sms-pair 123456
+/tocsin:sms-pair 123456
 ```
 
 ## Arguments
@@ -14,5 +14,5 @@ Complete SMS authentication with your pairing code.
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-pair.sh" "${ARGUMENTS}"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-pair.js" "${ARGUMENTS}"
 ```

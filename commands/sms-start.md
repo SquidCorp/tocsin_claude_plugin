@@ -5,7 +5,7 @@ Start monitoring a Claude session and sync with SMS server.
 ## Usage
 
 ```
-/sms-start "Description of what you're working on"
+/tocsin:sms-start "Description of what you're working on"
 ```
 
 ## What happens
@@ -19,19 +19,20 @@ Start monitoring a Claude session and sync with SMS server.
 ## Example
 
 ```
-/sms-start "Implementing user authentication feature"
+/tocsin:sms-start "Implementing user authentication feature"
 ```
 
 ## Server Sync
 
 This command now syncs your Claude session with the SMS server, enabling:
+
 - Real-time error notifications via SMS
 - Session completion alerts
 - Idle timeout warnings
 
-The session remains active until you run `/sms-stop` or the session expires.
+The session remains active until you run `/tocsin:sms-stop` or the session expires.
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-start.sh" "$@"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-start.js" "$@"
 ```
