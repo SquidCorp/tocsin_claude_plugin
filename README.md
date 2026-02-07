@@ -10,23 +10,43 @@ Get SMS notifications when Claude Code needs your attention, finishes work, or h
 
 ## Quick Start
 
+### Option 1: One Command (Recommended)
+
+```bash
+npx tocsin-claude-plugin
+```
+
+This will:
+1. ✅ Copy plugin files to `~/.claude/plugins/`
+2. ✅ Install the plugin in Claude Code
+3. ✅ Guide you through SMS setup
+
+Then in Claude Code:
+```
+/sms-login +1234567890
+/sms-pair 123456
+/sms-start "Fixing production bug"
+```
+
+### Option 2: Manual Installation
+
 ```bash
 # 1. Set your SMS server URL
 export CLAUDE_SMS_SERVER_URL="https://sms.yourserver.com"
 
-# 2. Install the plugin
-claude plugin install /path/to/tocsin
+# 2. Clone and install
+git clone https://github.com/SquidCorp/tocsin_claude_plugin.git
+cd tocsin_claude_plugin
+npm install
+claude plugin install .
 
-# 3. Install Node.js dependencies (if not already done)
-cd /path/to/tocsin && npm install
-
-# 4. In Claude Code, authenticate
+# 3. In Claude Code, authenticate
 /sms-login +1234567890
 # (sends SMS with pairing code)
 
 /sms-pair 123456  # your 6-digit code
 
-# 5. Start monitoring a session
+# 4. Start monitoring a session
 /sms-start "Fixing production bug"
 # Work remotely... get SMS when Claude needs you!
 ```

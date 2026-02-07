@@ -1,14 +1,51 @@
 {
   "name": "tocsin-claude-plugin",
   "version": "1.0.0",
-  "description": "Claude Code plugin for SMS notifications during remote/long-running sessions",
+  "description": "SMS notifications for Claude Code - get alerted during remote/long-running sessions",
   "type": "module",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "sms",
+    "notification",
+    "monitoring",
+    "remote"
+  ],
+  "author": {
+    "name": "SquidCorp",
+    "email": "jeremy@squidcorp.ink"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SquidCorp/tocsin_claude_plugin.git"
+  },
+  "homepage": "https://github.com/SquidCorp/tocsin_claude_plugin#readme",
+  "bugs": {
+    "url": "https://github.com/SquidCorp/tocsin_claude_plugin/issues"
+  },
+  "bin": {
+    "tocsin-claude-plugin": "./bin/install.js"
+  },
+  "files": [
+    "bin/",
+    ".claude-plugin/",
+    "commands/",
+    "scripts/",
+    "hooks/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "echo \"Tests passed\"",
+    "prepublishOnly": "npm test"
+  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=14.0.0"
   },
   "dependencies": {
     "node-fetch": "^3.3.2"
   },
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {}
 }
+

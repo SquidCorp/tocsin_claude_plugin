@@ -1,0 +1,44 @@
+# Development
+.git/
+.github/
+.vscode/
+.idea/
+.claude/
+
+# Documentation (keep only README.md)
+CLAUDE.md
+AUDIT_REPORT.md
+REMEDIATION_PLAN.md
+HEARTBEAT_IMPLEMENTATION.md
+HOOKS_UPDATE_SUMMARY.md
+HOOKS_TESTING_GUIDE.md
+MIGRATION_SUMMARY.md
+COOLDOWN_REMOVAL_SUMMARY.md
+NOTIFICATION_DEBUG_GUIDE.md
+NPX_DISTRIBUTION_GUIDE.md
+
+# Testing
+test/
+*.test.js
+coverage/
+
+# Logs
+*.log
+heartbeat.log
+
+# Config
+.config/
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Node
+node_modules/
+npm-debug.log
