@@ -174,25 +174,27 @@ function makeScriptsExecutable(pluginDir) {
 }
 
 /**
- * Install plugin in Claude Code
+ * Verify plugin installation
  */
 function installPlugin() {
-  console.log("🔧 Installing plugin in Claude Code...\n");
+  console.log("🔧 Verifying plugin installation...\n");
 
-  try {
-    execSync(`claude plugin install "${PLUGIN_DIR}"`, {
-      stdio: "inherit",
-      shell: true,
-    });
-    console.log("\n  ✓ Plugin installed successfully");
-  } catch (error) {
-    console.error("\n  ✗ Plugin installation failed");
-    console.error(
-      `\nTry manually: claude plugin install "${PLUGIN_DIR}"\n`
-    );
+  // Check if plugin files exist
+  const pluginJsonPath = path.join(PLUGIN_DIR, ".claude-plugin", "plugin.json");
+  const hooksPath = path.join(PLUGIN_DIR, "hooks", "hooks.json");
+
+  if (!fs.existsSync(pluginJsonPath)) {
+    console.error("  ✗ Plugin manifest not found");
     process.exit(1);
   }
 
+  if (!fs.existsSync(hooksPath)) {
+    console.error("  ✗ Hooks configuration not found");
+    process.exit(1);
+  }
+
+  console.log("  ✓ Plugin files verified");
+  console.log(`  ✓ Installed to: ${PLUGIN_DIR}`);
   console.log();
 }
 
@@ -201,7 +203,7 @@ function installPlugin() {
  */
 function guideSetup() {
   console.log("📱 Next Steps:\n");
-  console.log("1. Open Claude Code");
+  console.log("1. Restart Claude Code (so it discovers the plugin)");
   console.log("2. Run: /sms-login +1234567890");
   console.log("3. Enter the SMS code: /sms-pair 123456");
   console.log('4. Start monitoring: /sms-start "Your session description"\n');
