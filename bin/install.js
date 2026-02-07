@@ -211,6 +211,16 @@ function installPlugin() {
     process.exit(1);
   }
 
+  // Remove orphaned marker if it exists
+  const orphanedMarker = path.join(PLUGIN_DIR, ".orphaned_at");
+  if (fs.existsSync(orphanedMarker)) {
+    try {
+      fs.unlinkSync(orphanedMarker);
+    } catch (error) {
+      // Continue if we can't remove it
+    }
+  }
+
   console.log("  ✓ Plugin files verified");
   console.log(`  ✓ Installed to: ${PLUGIN_DIR}`);
   console.log();
