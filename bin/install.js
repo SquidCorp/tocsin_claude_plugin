@@ -10,10 +10,13 @@
  * 4. Guides user through SMS setup
  */
 
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
-const os = require("os");
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
+import os from "os";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PLUGIN_NAME = "tocsin-claude-plugin";
@@ -24,7 +27,7 @@ const SOURCE_DIR = path.join(__dirname, "..");
  * Main installer function
  */
 async function main() {
-  console.log("Tocsin Claude Plugin - Installer");
+  console.log("🦞 Tocsin Claude Plugin - Installer");
   console.log("===================================\n");
 
   try {
@@ -184,7 +187,9 @@ function installPlugin() {
     console.log("\n  ✓ Plugin installed successfully");
   } catch (error) {
     console.error("\n  ✗ Plugin installation failed");
-    console.error(`\nTry manually: claude plugin install "${PLUGIN_DIR}"\n`);
+    console.error(
+      `\nTry manually: claude plugin install "${PLUGIN_DIR}"\n`
+    );
     process.exit(1);
   }
 
@@ -197,12 +202,10 @@ function installPlugin() {
 function guideSetup() {
   console.log("📱 Next Steps:\n");
   console.log("1. Open Claude Code");
-  console.log("2. Run: /tocsin:sms-login +1234567890");
-  console.log("3. Enter the SMS code: /tocsin:sms-pair 123456");
-  console.log(
-    '4. Start monitoring: /tocsin:sms-start "Your session description"\n'
-  );
-  console.log("For help: /tocsin:sms-status\n");
+  console.log("2. Run: /sms-login +1234567890");
+  console.log("3. Enter the SMS code: /sms-pair 123456");
+  console.log('4. Start monitoring: /sms-start "Your session description"\n');
+  console.log("For help: /sms-status\n");
   console.log(
     "Documentation: https://github.com/SquidCorp/tocsin_claude_plugin\n"
   );
