@@ -53,7 +53,7 @@ import { readStdin } from "./lib/stdin.js";
       // Auto-start monitoring session
       try {
         const auth = readJSON(FILES.AUTH);
-        const authToken = auth?.token;
+        const authToken = auth?.access_token;
 
         if (!authToken) {
           process.exit(0);

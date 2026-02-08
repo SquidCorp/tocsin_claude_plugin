@@ -33,3 +33,4 @@ Thumbs.db
 # User config (contains tokens)
 .config/
 **/.config/tocsin/
+.claude/

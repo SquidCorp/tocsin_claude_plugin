@@ -1,6 +1,9 @@
 {
-  "name": "SquidCorp Plugin Marketplace",
-  "description": "SquidCorp's collection of Claude Code plugins",
+  "name": "squidcorp-plugins",
+  "owner": {
+    "name": "SquidCorp",
+    "email": "jeremy@squidcorp.ink"
+  },
   "plugins": [
     {
       "name": "tocsin",

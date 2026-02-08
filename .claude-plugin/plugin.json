@@ -9,7 +9,5 @@
   "homepage": "https://github.com/SquidCorp/tocsin_claude_plugin",
   "repository": "https://github.com/SquidCorp/tocsin_claude_plugin",
   "license": "MIT",
-  "keywords": ["sms", "notification", "remote", "monitoring", "alert"],
-  "commands": ["./commands/"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["sms", "notification", "remote", "monitoring", "alert"]
 }

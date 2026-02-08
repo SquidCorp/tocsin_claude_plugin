@@ -9,11 +9,11 @@
  * Official docs: https://code.claude.com/docs/en/hooks#sessionend
  */
 
-import fs from 'fs';
-import { FILES } from './lib/config.js';
-import { readJSON, deleteFile, fileExists } from './lib/files.js';
-import { apiRequest } from './lib/api.js';
-import { readStdin } from './lib/stdin.js';
+import fs from "fs";
+import { FILES } from "./lib/config.js";
+import { readJSON, deleteFile, fileExists } from "./lib/files.js";
+import { apiRequest } from "./lib/api.js";
+import { readStdin } from "./lib/stdin.js";
 
 (async () => {
   try {
@@ -21,20 +21,20 @@ import { readStdin } from './lib/stdin.js';
     const input = await readStdin();
 
     // Extract SessionEnd fields
-    const reason = input.reason || 'unknown';
-    const sessionId = input.session_id || '';
+    const reason = input.reason || "unknown";
+    const sessionId = input.session_id || "";
     const timestamp = new Date().toISOString();
 
     // Stop heartbeat daemon if running
     if (fileExists(FILES.HEARTBEAT_PID)) {
       try {
-        const pidStr = fs.readFileSync(FILES.HEARTBEAT_PID, 'utf8').trim();
+        const pidStr = fs.readFileSync(FILES.HEARTBEAT_PID, "utf8").trim();
         const pid = parseInt(pidStr, 10);
 
         // Check if process is running and kill it
         try {
           process.kill(pid, 0); // Check if exists
-          process.kill(pid, 'SIGTERM'); // Kill it
+          process.kill(pid, "SIGTERM"); // Kill it
         } catch {
           // Process not running
         }
@@ -64,29 +64,28 @@ import { readStdin } from './lib/stdin.js';
     // Determine final state based on reason
     let finalState;
     switch (reason) {
-      case 'clear':
-      case 'logout':
-        finalState = 'success';
+      case "clear":
+      case "logout":
+        finalState = "success";
         break;
-      case 'bypass_permissions_disabled':
-      case 'prompt_input_exit':
-        finalState = 'interrupted';
+      case "bypass_permissions_disabled":
+      case "prompt_input_exit":
+        finalState = "interrupted";
         break;
       default:
-        finalState = 'success';
+        finalState = "success";
         break;
     }
 
     // Send session stop to server (fire and forget)
     await apiRequest(`/sessions/${monitoringId}/stop`, {
-      method: 'POST',
+      method: "POST",
       token: sessionToken,
       body: {
         reason: reason,
         final_state: finalState,
         ended_at: timestamp,
-        session_id: sessionId
-      }
+      },
     }).catch(() => {
       // Suppress errors - cleanup must complete
     });
