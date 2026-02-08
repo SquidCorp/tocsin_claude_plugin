@@ -3,7 +3,8 @@
 import fs from "fs";
 import { FILES } from "./lib/config.js";
 import { readJSON, deleteFile, fileExists } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 console.log("🔕 Stopping SMS monitoring...");
 
@@ -76,6 +77,13 @@ try {
     },
   });
 } catch (error) {
+  // Handle authentication errors
+  if (error instanceof AuthenticationError) {
+    handleAuthenticationError({ context: 'sms-unpair' });
+    process.exit(1);
+  }
+
+  // Handle other errors - continue with cleanup
   console.log("⚠️  Could not reach server, but cleaning up locally...");
 }
 

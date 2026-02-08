@@ -12,8 +12,9 @@
 
 import { FILES } from "./lib/config.js";
 import { readJSON, fileExists } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
 import { readStdin } from "./lib/stdin.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 (async () => {
   try {
@@ -62,23 +63,29 @@ import { readStdin } from "./lib/stdin.js";
     const timestamp = new Date().toISOString();
 
     // Send idle/waiting event to server
-    await apiRequest(`/sessions/${monitoringId}/events`, {
-      method: "POST",
-      token: sessionToken,
-      body: {
-        event_type: "waiting",
-        timestamp: timestamp,
-        details: {
-          notification_type: notificationType,
-          message: message,
-          title: title,
-          session_id: sessionId,
-          source: "notification_hook",
+    try {
+      await apiRequest(`/sessions/${monitoringId}/events`, {
+        method: "POST",
+        token: sessionToken,
+        body: {
+          event_type: "waiting",
+          timestamp: timestamp,
+          details: {
+            notification_type: notificationType,
+            message: message,
+            title: title,
+            session_id: sessionId,
+            source: "notification_hook",
+          },
         },
-      },
-    }).catch(() => {
-      // Suppress errors - hooks must not block
-    });
+      });
+    } catch (error) {
+      // Handle authentication errors silently
+      if (error instanceof AuthenticationError) {
+        handleAuthenticationError({ silent: true, context: 'handle-idle' });
+      }
+      // Suppress other errors - hooks must not block
+    }
 
     process.exit(0);
   } catch (error) {

@@ -3,7 +3,8 @@
 import fs from 'fs';
 import { FILES, HEARTBEAT_INTERVAL } from './lib/config.js';
 import { readJSON, writeJSON, fileExists } from './lib/files.js';
-import { apiRequest } from './lib/api.js';
+import { apiRequest, AuthenticationError } from './lib/api.js';
+import { handleAuthenticationError } from './lib/auth-utils.js';
 
 // Log with timestamp
 function log(message) {
@@ -66,12 +67,17 @@ async function sendHeartbeat() {
     log(`Heartbeat sent (${monitoringId.substring(0, 8)}...)`);
     return { success: true };
   } catch (error) {
+    // Handle authentication errors
+    if (error instanceof AuthenticationError) {
+      log('ERROR: Authentication failed, token expired or invalid');
+      handleAuthenticationError({ silent: true, context: 'heartbeat-daemon' });
+      return { success: false, fatal: true };
+    }
+
+    // Handle other errors
     const message = error.message || 'Unknown error';
 
-    if (message.includes('401') || message.includes('403')) {
-      log('ERROR: Authentication failed, session may be expired');
-      return { success: false, fatal: true };
-    } else if (message.includes('404')) {
+    if (message.includes('404')) {
       log('ERROR: Session not found on server, stopping');
       return { success: false, fatal: true };
     } else {
@@ -95,7 +101,7 @@ async function sendHeartbeat() {
 
   // Main heartbeat loop
   const intervalId = setInterval(async () => {
-    // Check if session file still exists (stops if sms-stop was called)
+    // Check if session file still exists (stops if sms-unpair was called)
     if (!fileExists(FILES.SESSION)) {
       log('Session file removed, exiting');
       clearInterval(intervalId);
@@ -110,6 +116,5 @@ async function sendHeartbeat() {
     }
   }, HEARTBEAT_INTERVAL);
 
-  // Keep process alive
-  intervalId.unref(); // Allow process to exit naturally if needed
+  // Interval keeps the daemon alive until session ends or fatal error occurs
 })();

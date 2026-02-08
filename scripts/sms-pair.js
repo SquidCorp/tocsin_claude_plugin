@@ -4,7 +4,7 @@ import crypto from "crypto";
 import os from "os";
 import { FILES } from "./lib/config.js";
 import { readText, writeJSON, deleteFile, fileExists } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
 
 const code = process.argv[2];
 
@@ -84,6 +84,16 @@ try {
   console.log("");
   console.log('Next: Run /tocsin:sms-start "Your session description"');
 } catch (error) {
+  // Handle authentication errors
+  if (error instanceof AuthenticationError) {
+    console.error("❌ Authentication failed: Invalid pairing code");
+    console.error("");
+    console.error("The pairing code may have expired or be invalid.");
+    console.error("Run /tocsin:sms-login to generate a new code.");
+    process.exit(1);
+  }
+
+  // Handle other errors
   const errorMessage = error.message || "Unknown error";
   console.error(`❌ Exchange failed: ${errorMessage}`);
   console.error("");

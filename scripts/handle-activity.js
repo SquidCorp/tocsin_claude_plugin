@@ -14,8 +14,9 @@
 import os from "os";
 import { FILES } from "./lib/config.js";
 import { readJSON, writeJSON, fileExists } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
 import { readStdin } from "./lib/stdin.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 (async () => {
   try {
@@ -59,16 +60,25 @@ import { readStdin } from "./lib/stdin.js";
           process.exit(0);
         }
 
-        const startResponse = await apiRequest("/sessions/start", {
-          method: "POST",
-          token: authToken,
-          body: {
-            claude_session_id: sessionId,
-            description: description,
-            hostname: os.hostname(),
-            started_at: new Date().toISOString(),
-          },
-        });
+        let startResponse;
+        try {
+          startResponse = await apiRequest("/sessions/start", {
+            method: "POST",
+            token: authToken,
+            body: {
+              claude_session_id: sessionId,
+              description: description,
+              hostname: os.hostname(),
+              started_at: new Date().toISOString(),
+            },
+          });
+        } catch (error) {
+          // Handle authentication errors during auto-start
+          if (error instanceof AuthenticationError) {
+            handleAuthenticationError({ silent: true, context: 'handle-activity-autostart' });
+          }
+          throw error;
+        }
 
         // Save session data
         writeJSON(FILES.SESSION, {
@@ -114,18 +124,24 @@ import { readStdin } from "./lib/stdin.js";
     const timestamp = new Date().toISOString();
 
     // Send heartbeat to server (fire and forget - don't block hook)
-    await apiRequest(`/sessions/${monitoringId}/heartbeat`, {
-      method: "POST",
-      token: sessionToken,
-      body: {
-        timestamp: timestamp,
-        last_activity: timestamp,
-        session_id: sessionId,
-        prompt_length: prompt.length,
-      },
-    }).catch(() => {
-      // Suppress errors - hooks must not block
-    });
+    try {
+      await apiRequest(`/sessions/${monitoringId}/heartbeat`, {
+        method: "POST",
+        token: sessionToken,
+        body: {
+          timestamp: timestamp,
+          last_activity: timestamp,
+          session_id: sessionId,
+          prompt_length: prompt.length,
+        },
+      });
+    } catch (error) {
+      // Handle authentication errors silently
+      if (error instanceof AuthenticationError) {
+        handleAuthenticationError({ silent: true, context: 'handle-activity' });
+      }
+      // Suppress other errors - hooks must not block
+    }
 
     process.exit(0);
   } catch (error) {

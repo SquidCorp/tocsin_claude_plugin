@@ -3,6 +3,17 @@
 import { SERVER_URL } from './config.js';
 
 /**
+ * Custom error class for authentication failures (401)
+ */
+export class AuthenticationError extends Error {
+  constructor(message, statusCode = 401) {
+    super(message);
+    this.name = 'AuthenticationError';
+    this.statusCode = statusCode;
+  }
+}
+
+/**
  * Make an HTTP request to the SMS server
  * @param {string} endpoint - API endpoint (e.g., '/sessions/start')
  * @param {object} options - Fetch options
@@ -47,6 +58,12 @@ export async function apiRequest(endpoint, options = {}) {
     }
 
     if (!response.ok) {
+      // Check for 401 Unauthorized - authentication failed
+      if (response.status === 401) {
+        throw new AuthenticationError('Authentication failed: token expired or invalid', 401);
+      }
+
+      // Generic error handling for other status codes
       const errorMessage = data.error || data.message || `HTTP ${response.status}`;
       throw new Error(errorMessage);
     }

@@ -1,11 +1,11 @@
-# /sms-stop
+# /sms-unpair
 
 Stop the current monitoring session and notify server.
 
 ## Usage
 
 ```
-/tocsin:sms-stop
+/tocsin:sms-unpair
 ```
 
 ## What happens
@@ -23,5 +23,5 @@ Stop the current monitoring session and notify server.
 
 ```bash
 #!/bin/bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sms-stop.js" "$@"
+"${CLAUDE_PLUGIN_ROOT}/scripts/sms-unpair.js" "$@"
 ```

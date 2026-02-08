@@ -12,8 +12,9 @@
 import fs from "fs";
 import { FILES } from "./lib/config.js";
 import { readJSON, deleteFile, fileExists } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
 import { readStdin } from "./lib/stdin.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 (async () => {
   try {
@@ -78,17 +79,23 @@ import { readStdin } from "./lib/stdin.js";
     }
 
     // Send session stop to server (fire and forget)
-    await apiRequest(`/sessions/${monitoringId}/stop`, {
-      method: "POST",
-      token: sessionToken,
-      body: {
-        reason: reason,
-        final_state: finalState,
-        ended_at: timestamp,
-      },
-    }).catch(() => {
-      // Suppress errors - cleanup must complete
-    });
+    try {
+      await apiRequest(`/sessions/${monitoringId}/stop`, {
+        method: "POST",
+        token: sessionToken,
+        body: {
+          reason: reason,
+          final_state: finalState,
+          ended_at: timestamp,
+        },
+      });
+    } catch (error) {
+      // Handle authentication errors silently
+      if (error instanceof AuthenticationError) {
+        handleAuthenticationError({ silent: true, context: 'handle-session-end' });
+      }
+      // Suppress other errors - cleanup must complete
+    }
 
     // Clean up session file and logs
     deleteFile(FILES.SESSION);

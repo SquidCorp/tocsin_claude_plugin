@@ -98,7 +98,7 @@ claude plugin install .
    - Error at 14:15 → Blocked by server (same type, <30min)
    - Done at 14:15 → SMS sent (different type)
 
-5. **Cleanup** (`/sms-stop` or session end)
+5. **Cleanup** (`/sms-unpair` or session end)
    - Send final state to server
    - Remove session.json file
 
@@ -114,7 +114,7 @@ tocsin/
 │   ├── sms-login.md       # /sms-login
 │   ├── sms-pair.md        # /sms-pair
 │   ├── sms-start.md       # /sms-start
-│   ├── sms-stop.md        # /sms-stop
+│   ├── sms-unpair.md      # /sms-unpair
 │   ├── sms-status.md      # /sms-status
 │   └── sms-logout.md      # /sms-logout
 ├── hooks/
@@ -123,7 +123,7 @@ tocsin/
 │   ├── sms-login.js       # Authentication flow
 │   ├── sms-pair.js        # Token exchange
 │   ├── sms-start.js       # Session start + server sync
-│   ├── sms-stop.js        # Session end
+│   ├── sms-unpair.js      # Session end
 │   ├── sms-status.js      # Session status check
 │   ├── sms-logout.js      # Revoke auth
 │   ├── handle-error.js    # PostToolUseFailure hook
@@ -253,7 +253,7 @@ JWT_SECRET=your-secret-key
 | `/sms-login`        | Start auth flow  | First time, or token expired (36h)         |
 | `/sms-pair 123456`  | Complete auth    | After receiving SMS code                   |
 | `/sms-start "desc"` | Start monitoring | Beginning of focused work session          |
-| `/sms-stop`         | Stop monitoring  | Done early, don't want more SMS            |
+| `/sms-unpair`       | Stop monitoring  | Done early, don't want more SMS            |
 | `/sms-status`       | Check status     | See active session, heartbeat daemon state |
 | `/sms-logout`       | Revoke auth      | Switch phone, uninstall, security          |
 
@@ -424,7 +424,7 @@ claude plugin install /path/to/tocsin_claude_plugin
 /sms-pair 123456
 /sms-start "Test session"
 /sms-status
-/sms-stop
+/sms-unpair
 
 # Check state files
 cat ~/.config/tocsin/auth.json

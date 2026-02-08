@@ -30,7 +30,7 @@ This command now syncs your Claude session with the SMS server, enabling:
 - Session completion alerts
 - Idle timeout warnings
 
-The session remains active until you run `/tocsin:sms-stop` or the session expires.
+The session remains active until you run `/tocsin:sms-unpair` or the session expires.
 
 ```bash
 #!/bin/bash

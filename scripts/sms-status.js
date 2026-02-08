@@ -12,10 +12,26 @@ console.log("");
 if (fileExists(FILES.AUTH)) {
   const auth = readJSON(FILES.AUTH);
   const phone = auth?.phone || "unknown";
-  const expires = auth?.expires_at || "unknown";
+  const expiresAt = auth?.expires_at || "unknown";
+
+  // Check if token is expired
+  let isExpired = false;
+  try {
+    if (expiresAt !== "unknown") {
+      const expiryDate = new Date(expiresAt);
+      isExpired = expiryDate < new Date();
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
   console.log("🔑 Authentication:");
   console.log(`   Phone: ${phone}`);
-  console.log(`   Expires: ${expires}`);
+  console.log(`   Expires: ${expiresAt}`);
+
+  if (isExpired) {
+    console.log("   ⚠️  Token expired - run /tocsin:sms-login to re-authenticate");
+  }
 } else {
   console.log("❌ Not authenticated");
   console.log("   Run /tocsin:sms-login +phone");

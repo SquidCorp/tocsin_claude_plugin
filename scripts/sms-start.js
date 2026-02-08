@@ -8,7 +8,8 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import { FILES } from "./lib/config.js";
 import { readJSON, writeJSON, fileExists } from "./lib/files.js";
-import { authenticatedRequest } from "./lib/api.js";
+import { authenticatedRequest, AuthenticationError } from "./lib/api.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,16 +128,21 @@ try {
   console.log("  • ⏳ Waiting for input");
   console.log("  • ✅ When session completes");
   console.log("");
-  console.log("Run /tocsin:sms-stop to stop monitoring.");
+  console.log("Run /tocsin:sms-unpair to stop monitoring.");
 } catch (error) {
   console.log("");
+
+  // Handle authentication errors
+  if (error instanceof AuthenticationError) {
+    handleAuthenticationError({ context: 'sms-start' });
+    process.exit(1);
+  }
+
+  // Handle other errors
   console.error(`❌ Failed to start monitoring: ${error.message}`);
   console.log("");
 
-  if (error.message.includes("401") || error.message.includes("Unauthorized")) {
-    console.log("Your session may have expired.");
-    console.log("Run /tocsin:sms-login to re-authenticate.");
-  } else if (error.message.includes("Cannot connect")) {
+  if (error.message.includes("Cannot connect")) {
     console.error("Could not reach SMS server!");
     console.error("Check your internet connection or try again later.");
   }

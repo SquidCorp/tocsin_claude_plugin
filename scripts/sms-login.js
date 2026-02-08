@@ -4,7 +4,8 @@ import crypto from "crypto";
 import path from "path";
 import { FILES, PHONE_REGEX } from "./lib/config.js";
 import { fileExists, writeText, ensureDir } from "./lib/files.js";
-import { apiRequest } from "./lib/api.js";
+import { apiRequest, AuthenticationError } from "./lib/api.js";
+import { handleAuthenticationError } from "./lib/auth-utils.js";
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -75,6 +76,14 @@ try {
   console.log("⏳ Pairing code valid for 10 minutes.");
   process.exit(0);
 } catch (error) {
+  // Handle authentication errors (unlikely for login, but defensive)
+  if (error instanceof AuthenticationError) {
+    console.error("❌ Authentication error during login.");
+    console.error("This is unexpected. Please try again or contact support.");
+    process.exit(1);
+  }
+
+  // Handle other errors
   console.error("❌ Error: Could not reach SMS server.");
   console.error(error.message);
   process.exit(1);

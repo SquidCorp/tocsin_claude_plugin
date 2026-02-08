@@ -115,7 +115,7 @@ Since this is a Claude Code plugin, testing requires:
    ```bash
    /sms-start "Test session"
    # Trigger some work...
-   /sms-stop
+   /sms-unpair
    ```
 
 4. **Check state files**:
@@ -310,6 +310,12 @@ curl -X POST http://localhost:3000/sessions/start \
 - ✅ All hooks read from stdin per official docs
 - ✅ Heartbeat-only daemon (no client-side cooldown logic)
 - ✅ Server-side rate limiting (1 SMS per 30min per event type)
+- ✅ **Centralized 401 authentication error handling** (2026-02-08)
+  - Automatic logout on token expiry/revocation
+  - Type-safe `AuthenticationError` class
+  - Consistent handling across all 10 scripts (commands, hooks, daemon)
+  - User-friendly error messages for commands
+  - Silent handling for background processes (hooks, daemon)
 
 ### Implementation Status by Hook:
 
@@ -324,7 +330,7 @@ curl -X POST http://localhost:3000/sessions/start \
 - `sms-login.js` - ✅ Works (remote mode), ⚠️ Browser mode needs MCP server
 - `sms-pair.js` - ✅ Works
 - `sms-start.js` - ✅ Works, creates monitoring session
-- `sms-stop.js` - ✅ Works, ends monitoring session
+- `sms-unpair.js` - ✅ Works, ends monitoring session
 - `sms-logout.js` - ✅ Works
 - `sms-status.js` - ✅ Works, shows auth and session status
 
@@ -460,6 +466,79 @@ Users can override:
 export CLAUDE_SMS_SERVER_URL="https://sms.yourserver.com"
 ```
 
+## Authentication Error Handling (NEW: 2026-02-08)
+
+The plugin implements centralized 401 authentication error handling across all scripts.
+
+### Architecture
+
+**Three-Layer Design**:
+
+1. **Detection Layer** (`scripts/lib/api.js`):
+   - Custom `AuthenticationError` class extends `Error`
+   - Automatically thrown when server returns 401 Unauthorized
+   - Type-safe with `instanceof` checks
+
+2. **Handling Layer** (`scripts/lib/auth-utils.js`):
+   - `handleAuthenticationError({ silent, context })` function
+   - Automatically deletes `auth.json` (logout)
+   - Displays user message (commands) or silent (hooks/daemon)
+   - Logs to console.error for debugging
+
+3. **Consumer Layer** (10 scripts):
+   - All commands, hooks, and daemon catch `AuthenticationError`
+   - Call `handleAuthenticationError()` with appropriate options
+   - Commands: Show error message and exit(1)
+   - Hooks: Silent logout and exit(0) to never block
+   - Daemon: Silent logout and return fatal error flag
+
+### Behavior by Context
+
+**Commands** (user-initiated):
+```javascript
+catch (error) {
+  if (error instanceof AuthenticationError) {
+    handleAuthenticationError({ context: 'sms-start' });
+    process.exit(1);
+  }
+}
+```
+User sees: "⚠️ Authentication Failed - Please re-authenticate with: /sms-login +1234567890"
+
+**Hooks** (background events):
+```javascript
+catch (error) {
+  if (error instanceof AuthenticationError) {
+    handleAuthenticationError({ silent: true, context: 'handle-error' });
+  }
+}
+process.exit(0); // Never block Claude Code
+```
+User sees: Nothing immediately. Next command shows auth error.
+
+**Daemon** (long-running):
+```javascript
+catch (error) {
+  if (error instanceof AuthenticationError) {
+    handleAuthenticationError({ silent: true, context: 'heartbeat-daemon' });
+    return { success: false, fatal: true };
+  }
+}
+```
+Daemon exits gracefully. User sees auth error on next command.
+
+### Benefits
+
+- ✅ Single source of truth for auth error detection
+- ✅ Consistent logout behavior across all contexts
+- ✅ Type-safe error handling with custom error class
+- ✅ No duplicate code (all use shared utility)
+- ✅ Easy to test and maintain
+- ✅ Clear user messages for commands
+- ✅ Silent handling for background processes
+
+See `docs/authentication-error-flow.md` for detailed architecture diagrams.
+
 ## Security Considerations
 
 1. **Never commit tokens**: `.gitignore` excludes `**/.config/` and `**/auth.json`
@@ -468,6 +547,7 @@ export CLAUDE_SMS_SERVER_URL="https://sms.yourserver.com"
 4. **Token lifetime**: 36 hours, stored with 600 permissions
 5. **Session token separation**: Different token for each monitoring session
 6. **Hook safety**: All hooks exit(0) on errors to never block Claude Code
+7. **Automatic logout on 401**: Auth token is deleted when server returns Unauthorized
 
 ## Plugin Installation
 
@@ -500,6 +580,8 @@ The plugin will now send SMS notifications for:
 - `REMEDIATION_PLAN.md` - Step-by-step fix instructions for known issues
 - `MIGRATION_SUMMARY.md` - Bash to Node.js migration notes
 - `HEARTBEAT_IMPLEMENTATION.md` - Background heartbeat daemon design
+- `CENTRALIZED_401_HANDLING.md` - Authentication error handling implementation summary (NEW: 2026-02-08)
+- `docs/authentication-error-flow.md` - Detailed architecture diagrams for 401 handling (NEW: 2026-02-08)
 
 ## Official Documentation References
 

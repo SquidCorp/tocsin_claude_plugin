@@ -11,8 +11,9 @@
 
 import { FILES, BLOCKING_PATTERNS } from './lib/config.js';
 import { readJSON, fileExists } from './lib/files.js';
-import { apiRequest } from './lib/api.js';
+import { apiRequest, AuthenticationError } from './lib/api.js';
 import { readStdin } from './lib/stdin.js';
+import { handleAuthenticationError } from './lib/auth-utils.js';
 
 (async () => {
   try {
@@ -61,23 +62,29 @@ import { readStdin } from './lib/stdin.js';
     const timestamp = new Date().toISOString();
 
     // Send error event to server (fire and forget - don't block hook)
-    await apiRequest(`/sessions/${monitoringId}/events`, {
-      method: 'POST',
-      token: sessionToken,
-      body: {
-        event_type: 'error',
-        timestamp: timestamp,
-        details: {
-          tool_name: toolName,
-          tool_use_id: toolUseId,
-          error: error.substring(0, 500), // Truncate long errors
-          session_id: sessionId,
-          cwd: cwd
+    try {
+      await apiRequest(`/sessions/${monitoringId}/events`, {
+        method: 'POST',
+        token: sessionToken,
+        body: {
+          event_type: 'error',
+          timestamp: timestamp,
+          details: {
+            tool_name: toolName,
+            tool_use_id: toolUseId,
+            error: error.substring(0, 500), // Truncate long errors
+            session_id: sessionId,
+            cwd: cwd
+          }
         }
+      });
+    } catch (error) {
+      // Handle authentication errors silently
+      if (error instanceof AuthenticationError) {
+        handleAuthenticationError({ silent: true, context: 'handle-error' });
       }
-    }).catch(() => {
-      // Suppress errors - hooks must not block
-    });
+      // Suppress other errors - hooks must not block
+    }
 
     process.exit(0);
   } catch (error) {
