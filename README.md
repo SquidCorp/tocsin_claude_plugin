@@ -17,11 +17,13 @@ npx tocsin-claude-plugin
 ```
 
 This will:
+
 1. ✅ Copy plugin files to `~/.claude/plugins/`
 2. ✅ Install the plugin in Claude Code
 3. ✅ Guide you through SMS setup
 
 Then in Claude Code:
+
 ```
 /sms-login +1234567890
 /sms-pair 123456
@@ -223,7 +225,7 @@ See `docs/api-spec.md` for complete request/response schemas.
 
 ```bash
 # Required
-CLAUDE_SMS_SERVER_URL=https://sms.yourserver.com  # Default: http://localhost:3000
+CLAUDE_SMS_SERVER_URL=https://sms.yourserver.com  # Default: https://sms.api.squidcorp.ink
 
 # Optional (with defaults)
 CLAUDE_SMS_HEARTBEAT_INTERVAL=30  # Heartbeat interval in seconds (default: 30)
