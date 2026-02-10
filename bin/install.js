@@ -5,9 +5,10 @@
  *
  * This script:
  * 1. Detects Claude Code installation
- * 2. Copies plugin files to ~/.claude/plugins/
- * 3. Installs plugin via `claude` CLI
- * 4. Guides user through SMS setup
+ * 2. Checks for and removes existing installation
+ * 3. Adds marketplace repository
+ * 4. Installs plugin via `claude` CLI
+ * 5. Guides user through SMS setup
  */
 
 import fs from "fs";
@@ -20,25 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PLUGIN_NAME = "tocsin";
-const PLUGIN_VERSION = "1.0.0";
-const MARKETPLACE_NAME = "local";
-
-// SOURCE_DIR is where this npm package is installed (when run via npx, this is in the npm cache)
-const SOURCE_DIR = path.join(__dirname, "..");
-
-// Target installation directory in Claude Code's cache
-const INSTALL_DIR = path.join(
-  os.homedir(),
-  ".claude/plugins/cache",
-  MARKETPLACE_NAME,
-  PLUGIN_NAME,
-  PLUGIN_VERSION
-);
-
-// Claude Code's plugin registry file
+const MARKETPLACE_NAME = "SquidCorp-plugins";
 const REGISTRY_FILE = path.join(
   os.homedir(),
-  ".claude/plugins/installed_plugins.json"
+  ".claude/plugins/installed_plugins.json",
 );
 
 /**
@@ -52,19 +38,16 @@ async function main() {
     // Step 1: Check prerequisites
     checkPrerequisites();
 
-    // Step 2: Clean up old installations
-    cleanupOldInstallations();
+    // Step 2: Check if already installed and remove if needed
+    await checkAndRemoveExisting();
 
-    // Step 3: Copy plugin files to install directory
-    copyPluginFiles();
+    // Step 3: Add marketplace repository
+    await addMarketplace();
 
-    // Step 4: Make scripts executable
-    makeScriptsExecutable(INSTALL_DIR);
+    // Step 4: Install plugin via Claude CLI
+    await installPlugin();
 
-    // Step 5: Register plugin in Claude Code
-    registerPlugin();
-
-    // Step 6: Guide user through setup
+    // Step 5: Guide user through setup
     guideSetup();
 
     console.log("\n✅ Installation complete!\n");
@@ -117,217 +100,76 @@ function checkPrerequisites() {
 }
 
 /**
- * Clean up old plugin installations
+ * Check if plugin is already installed and remove if needed
  */
-function cleanupOldInstallations() {
-  console.log("🧹 Cleaning up old installations...\n");
+async function checkAndRemoveExisting() {
+  console.log("🔍 Checking for existing installation...\n");
 
-  // Unregister from plugin registry first
-  try {
-    if (fs.existsSync(REGISTRY_FILE)) {
-      const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
-      const pluginKey = `${PLUGIN_NAME}@${MARKETPLACE_NAME}`;
-
-      if (registry.plugins && registry.plugins[pluginKey]) {
-        delete registry.plugins[pluginKey];
-        fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2));
-        console.log("  ✓ Unregistered previous version from registry");
-      }
-    }
-  } catch (error) {
-    // Continue if we can't update registry
+  if (!fs.existsSync(REGISTRY_FILE)) {
+    console.log("  ✓ No existing installation found\n");
+    return;
   }
 
-  // Remove old installation directories
-  const oldLocations = [
-    INSTALL_DIR, // Current install location
-    path.join(os.homedir(), ".claude", "plugins", "tocsin-claude-plugin"),
-    path.join(os.homedir(), ".claude", "plugins", "tocsin"),
-  ];
+  try {
+    const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+    const pluginKey = "tocsin@SquidCorp-plugins";
 
-  let cleaned = false;
-  oldLocations.forEach((dir) => {
-    if (fs.existsSync(dir)) {
+    if (registry.plugins && registry.plugins[pluginKey]) {
+      console.log("  ✓ Found existing tocsin installation");
+      console.log("  🗑️  Removing previous installation...\n");
+
       try {
-        fs.rmSync(dir, { recursive: true, force: true });
-        console.log(`  ✓ Removed ${path.basename(dir)}`);
-        cleaned = true;
+        execSync("claude plugin marketplace remove SquidCorp-plugins", {
+          stdio: "inherit",
+          shell: true,
+        });
+        console.log("  ✓ Removed previous installation\n");
       } catch (error) {
-        // Continue even if cleanup fails
+        console.warn(
+          "  ⚠ Could not remove previous installation (continuing)\n",
+        );
       }
-    }
-  });
-
-  if (!cleaned) {
-    console.log("  ✓ No old installations found");
-  }
-
-  console.log();
-}
-
-/**
- * Copy plugin files to installation directory
- */
-function copyPluginFiles() {
-  console.log("📂 Installing plugin files...\n");
-
-  // Create install directory
-  fs.mkdirSync(INSTALL_DIR, { recursive: true });
-
-  // Copy directories
-  const directories = [".claude-plugin", "commands", "scripts", "hooks"];
-
-  directories.forEach((dir) => {
-    const src = path.join(SOURCE_DIR, dir);
-    const dest = path.join(INSTALL_DIR, dir);
-
-    if (fs.existsSync(src)) {
-      copyRecursiveSync(src, dest);
-      console.log(`  ✓ Copied ${dir}/`);
     } else {
-      console.warn(`  ⚠ Missing ${dir}/ directory`);
+      console.log("  ✓ No existing installation found\n");
     }
-  });
-
-  // Copy files
-  const files = ["LICENSE", "README.md"];
-  files.forEach((file) => {
-    const src = path.join(SOURCE_DIR, file);
-    const dest = path.join(INSTALL_DIR, file);
-
-    if (fs.existsSync(src)) {
-      fs.copyFileSync(src, dest);
-      console.log(`  ✓ Copied ${file}`);
-    }
-  });
-
-  console.log(`\n  📁 Installed to: ${INSTALL_DIR}\n`);
-}
-
-/**
- * Recursively copy directory
- */
-function copyRecursiveSync(src, dest) {
-  const exists = fs.existsSync(src);
-  const stats = exists && fs.statSync(src);
-  const isDirectory = exists && stats.isDirectory();
-
-  if (isDirectory) {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    fs.readdirSync(src).forEach((childItemName) => {
-      copyRecursiveSync(
-        path.join(src, childItemName),
-        path.join(dest, childItemName)
-      );
-    });
-  } else {
-    fs.copyFileSync(src, dest);
-  }
-}
-
-/**
- * Make all scripts executable
- */
-function makeScriptsExecutable(pluginDir) {
-  console.log("🔐 Setting script permissions...\n");
-
-  const scriptsDir = path.join(pluginDir, "scripts");
-  let count = 0;
-
-  if (fs.existsSync(scriptsDir)) {
-    // Make all .js files in scripts/ executable
-    const processDir = (dir) => {
-      fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          processDir(fullPath);
-        } else if (entry.isFile() && entry.name.endsWith(".js")) {
-          try {
-            fs.chmodSync(fullPath, 0o755);
-            count++;
-          } catch (error) {
-            console.warn(`  ⚠ Could not set permissions for ${entry.name}`);
-          }
-        }
-      });
-    };
-
-    processDir(scriptsDir);
-    console.log(`  ✓ Made ${count} scripts executable\n`);
-  } else {
-    console.warn("  ⚠ Scripts directory not found\n");
-  }
-}
-
-/**
- * Register plugin in Claude Code's registry
- */
-function registerPlugin() {
-  console.log("🔧 Registering plugin with Claude Code...\n");
-
-  // Verify plugin files were installed
-  const pluginJsonPath = path.join(
-    INSTALL_DIR,
-    ".claude-plugin",
-    "plugin.json"
-  );
-  const hooksPath = path.join(INSTALL_DIR, "hooks", "hooks.json");
-
-  if (!fs.existsSync(pluginJsonPath)) {
-    console.error("  ✗ Plugin manifest not found");
-    console.error(`  Expected: ${pluginJsonPath}`);
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(hooksPath)) {
-    console.error("  ✗ Hooks configuration not found");
-    console.error(`  Expected: ${hooksPath}`);
-    process.exit(1);
-  }
-
-  // Read or create registry file
-  let registry;
-  if (fs.existsSync(REGISTRY_FILE)) {
-    try {
-      registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
-    } catch (error) {
-      console.error("  ✗ Failed to read plugin registry");
-      console.error(`  ${error.message}`);
-      process.exit(1);
-    }
-  } else {
-    // Create new registry file
-    registry = {
-      version: 2,
-      plugins: {},
-    };
-  }
-
-  // Add plugin entry
-  const pluginKey = `${PLUGIN_NAME}@${MARKETPLACE_NAME}`;
-  const now = new Date().toISOString();
-
-  registry.plugins[pluginKey] = [
-    {
-      scope: "user",
-      installPath: INSTALL_DIR,
-      version: PLUGIN_VERSION,
-      installedAt: now,
-      lastUpdated: now,
-      gitCommitSha: null,
-      projectPath: null,
-    },
-  ];
-
-  // Write registry file
-  try {
-    fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2));
-    console.log(`  ✓ Registered ${pluginKey}`);
-    console.log(`  ✓ Plugin will be available after Claude Code restart\n`);
   } catch (error) {
-    console.error("  ✗ Failed to update plugin registry");
+    console.log("  ✓ No existing installation found\n");
+  }
+}
+
+/**
+ * Add marketplace repository
+ */
+async function addMarketplace() {
+  console.log("🏪 Adding marketplace repository...\n");
+
+  try {
+    execSync(
+      "claude plugin marketplace add https://github.com/SquidCorp/tocsin_claude_plugin",
+      { stdio: "inherit", shell: true },
+    );
+    console.log("  ✓ Marketplace repository added\n");
+  } catch (error) {
+    console.error("  ✗ Failed to add marketplace repository");
+    console.error(`  ${error.message}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Install plugin via Claude CLI
+ */
+async function installPlugin() {
+  console.log("📦 Installing plugin...\n");
+
+  try {
+    execSync("claude plugin install tocsin@SquidCorp-plugins --scope user", {
+      stdio: "inherit",
+      shell: true,
+    });
+    console.log("\n  ✓ Plugin installed successfully\n");
+  } catch (error) {
+    console.error("  ✗ Failed to install plugin");
     console.error(`  ${error.message}`);
     process.exit(1);
   }
@@ -341,17 +183,17 @@ function guideSetup() {
   console.log("1. Restart Claude Code (if currently running)");
   console.log("   The plugin will be auto-discovered on next launch\n");
   console.log("2. Authenticate with your phone number:");
-  console.log("   /sms-login +1234567890");
-  console.log("   /sms-pair 123456\n");
+  console.log("   /tocsin:sms-login +1234567890");
+  console.log("   /tocsin:sms-pair 123456\n");
   console.log("3. Start monitoring your session:");
-  console.log('   /sms-start "Your session description"\n');
+  console.log('   /tocsin:sms-start "Your session description"\n');
   console.log("💡 Configuration:");
   console.log("   Set SMS server URL (if using custom server):");
   console.log('   export CLAUDE_SMS_SERVER_URL="https://sms.yourserver.com"\n');
   console.log(
-    "📚 Documentation: https://github.com/SquidCorp/tocsin_claude_plugin"
+    "📚 Documentation: https://github.com/SquidCorp/tocsin_claude_plugin",
   );
-  console.log("❓ Check status: /sms-status\n");
+  console.log("❓ Check status: /tocsin:sms-status\n");
 }
 
 // Run installer
