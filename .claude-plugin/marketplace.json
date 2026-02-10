@@ -8,8 +8,8 @@
     {
       "name": "tocsin",
       "source": {
-        "source": "github",
-        "repo": "SquidCorp/tocsin_claude_plugin"
+        "source": "git",
+        "url": "https://github.com/SquidCorp/tocsin_claude_plugin.git"
       },
       "description": "Get SMS notifications when Claude Code needs attention, finishes work, or hits errors. Perfect for remote/long-running sessions.",
       "version": "1.0.0",
